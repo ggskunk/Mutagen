@@ -20,9 +20,9 @@
 using namespace std;
 
 // Configuration
-const string TARGET_HASH160 = "e0b8a2baee1b77fc703455f39d51477451fc8cfc";
-const string BASE_KEY = "00000000000000000000000000000000000000000000000730fc235c1942c1ae";
-const int PUZZLE_NUM = 68;
+const string TARGET_HASH160 = "29a78213caa9eea824acf08022ab9dfc83414f56";
+const string BASE_KEY = "00000000000000000000000000000000000000000000000000000000000d2c55";
+const int PUZZLE_NUM = 21;
 const int WORKERS = thread::hardware_concurrency();
 const size_t REPORT_INTERVAL = 10000;
 
@@ -38,7 +38,7 @@ const unordered_map<int, int> FLIP_TABLE = {
     {44, 24}, {45, 21}, {46, 24}, {47, 27}, {48, 21}, {49, 30}, {50, 29}, {51, 25},
     {52, 27}, {53, 26}, {54, 30}, {55, 31}, {56, 31}, {57, 33}, {58, 28}, {59, 30},
     {60, 31}, {61, 25}, {62, 35}, {63, 34}, {64, 34}, {65, 37}, {66, 35}, {67, 31},
-    {68, 3}
+    {68, 34}
 };
 
 // Global variables
@@ -136,7 +136,7 @@ string compute_hash160(const BIGNUM* priv_key) {
    
     char hex[41];
     for (int i = 0; i < 20; i++)
-        sprintf(hex + 2*i, "%02x", ripemd160[i]);
+        snprintf(hex + 2 * i, sizeof(hex) - 2 * i, "%02x", ripemd160[i]);
     return string(hex);
 }
 
@@ -186,10 +186,10 @@ int main() {
     BIGNUM* base_bn = BN_new();
     BN_hex2bn(&base_bn, BASE_KEY.c_str());
    
-    const int flip_count = predict_flips(PUZZLE_NUM);
-    const int bit_length = 256;
-    const size_t total_combs = combinations_count(bit_length, flip_count);
-   
+    const int flip_count = predict_flips(PUZZLE_NUM);   // Количество изменяемых бит для головоломки
+    const int bit_length = PUZZLE_NUM;                    // Длина головоломки, например 20 бит для головоломки 20
+    const size_t total_combs = combinations_count(bit_length, flip_count);  // Рассчитываем количество комбинаций для данной головоломки
+    
     cout << "Searching Puzzle " << PUZZLE_NUM << " (256-bit)\n";
     cout << "Base Key: " << BASE_KEY << "\n";
     cout << "Target HASH160: " << TARGET_HASH160 << "\n";
@@ -210,17 +210,21 @@ int main() {
     for (auto& t : threads) t.join();
     BN_free(base_bn);
    
+    // Защита от ошибок при отсутствии решений
     if (!results.empty()) {
         auto [hex_key, checked, flips] = results.front();
         auto elapsed = chrono::duration_cast<chrono::seconds>(
             chrono::high_resolution_clock::now() - start_time).count();
+
+        // Защита от деления на ноль при вычислении скорости
+        double speed = (elapsed > 0) ? (checked / elapsed) : 0.0;
        
         cout << "\n\n== SOLUTION FOUND ==\n";
         cout << "Private Key: " << hex_key << "\n";
         cout << "Actual Bit Flips: " << flips << "\n";
         cout << "Keys Checked: " << checked << "\n";
         cout << "Search Time: " << elapsed << " seconds\n";
-        cout << "Speed: " << (checked/elapsed) << " keys/sec\n";
+        cout << "Speed: " << fixed << setprecision(2) << speed << " keys/sec\n";
        
         ofstream out("puzzle_" + to_string(PUZZLE_NUM) + "_solution.txt");
         out << hex_key;
