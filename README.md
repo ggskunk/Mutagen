@@ -4,6 +4,8 @@ We take, for example, the key to the 19th puzzle 0000000000000000000000000000000
 
 and mutate its private key bits, this allows us to reduce the number of options for enumerating options
 
+build : g++ -O3 -march=native -std=c++17 mutagen.cpp -lssl -lcrypto -lpthread -o mutagen
+
 
 The program is in development mode. If anyone wants to help improve it, they are welcome.
 
