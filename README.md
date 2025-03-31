@@ -12,5 +12,5 @@ The program is in development mode. If anyone wants to help improve it, they are
 As improvements are made, the repository will be updated
 
 
-donation address
+donation address : 
 bc1qa3c5xdc6a3n2l3w0sq3vysustczpmlvhdwr8vc
