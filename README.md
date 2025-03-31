@@ -6,6 +6,22 @@ and mutate its private key bits, this allows us to reduce the number of options 
 
 build : g++ -O3 -march=native -std=c++17 mutagen.cpp -lssl -lcrypto -lpthread -o mutagen
 
+./mutagen -p [PUZZLE_NUMBER] -t [THREAD_COUNT]
+
+Options
+
+-p	Puzzle number to solve (20-68)	20
+-t	Number of worker threads to use	CPU core count
+-h	Show help message	
+
+Examples
+Solve puzzle 25 using all available CPU cores:
+
+./mutagen -p 25 
+
+Solve puzzle 25 using 8 threads:
+
+./mutagen -p 25 -t 8
 
 The program is in development mode. If anyone wants to help improve it, they are welcome.
 
@@ -13,4 +29,4 @@ As improvements are made, the repository will be updated
 
 
 donation address : 
-bc1qa3c5xdc6a3n2l3w0sq3vysustczpmlvhdwr8vc
+bc1qdwnxr7s08xwelpjy3cc52rrxg63xsmagv50fa8
