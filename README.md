@@ -15,7 +15,7 @@ build : make
 # Show help
 ./puzzle_solver -h
 
-Key Features
+# # Key Features
 Command-line options:
 
 -p/--puzzle: Puzzle number (20-68)
@@ -26,7 +26,7 @@ Command-line options:
 
 -h/--help: Show usage information
 
-Optimizations:
+# # Optimizations:
 
 AVX2 vectorization for cryptographic operations
 
