@@ -33,7 +33,7 @@ using namespace std;
 int PUZZLE_NUM = 20;
 int WORKERS = omp_get_num_procs();
 int FLIP_COUNT = -1; // Will be set based on puzzle number unless overridden
-const size_t REPORT_INTERVAL = 10000;
+const size_t REPORT_INTERVAL = 10000000;
 static constexpr int POINTS_BATCH_SIZE = 256;
 static constexpr int HASH_BATCH_SIZE = 8;
 
@@ -308,7 +308,7 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, size_
     CombinationGenerator gen(bit_length, flip_count);
     gen.unrank(start);
 
-    for (size_t count = start; count < end && !stop_event.load(); count++) {
+    for (size_t count = start; !stop_event.load(); ) {
         Int currentKey;
         currentKey.Set(&BASE_KEY);
         
@@ -477,21 +477,36 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, size_
                     double progress = min(100.0, (double)total_checked / total_combinations * 100.0);
                     
                     lock_guard<mutex> lock(progress_mutex);
-                    // Clear previous progress output
-                    cout << "\033[4A"; // Move up 5 lines
-                    cout << "\033[0J"; // Clear from cursor to end of screen
-                    
-                    // Print new progress information
+                    cout << "\033[4A";
+                    cout << "\033[0J";
                     cout << "Progress: " << fixed << setprecision(6) << progress << "%\n";
                     cout << "Processed: " << total_checked << "\n";
                     cout << "Speed: " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";
                     cout << "Elapsed Time: " << formatElapsedTime(globalElapsedTime) << "\n";
                     cout.flush();
+
+                    // Check if all combinations processed
+                    if (total_checked >= total_combinations) {
+                        stop_event.store(true);
+                        break;
+                    }
                 }
             }
         }
 
-        if (!gen.next()) break;
+        if (!gen.next()) {
+            break;
+        }
+        count++;
+
+        if (count >= end) {
+            break;
+        }
+    }
+
+    // Final check when thread completes its range
+    if (!stop_event.load() && total_checked >= total_combinations) {
+        stop_event.store(true);
     }
 }
 

@@ -7,15 +7,19 @@ and mutate its private key bits, this allows us to reduce the number of options 
 build : make
 
 # Solve puzzle 38 with 8 threads and override flip count to 21
+
 ./puzzle_solver -p 38 -t 8 -f 21
 
 # Solve puzzle 20 with default settings
+
 ./puzzle_solver
 
 # Show help
+
 ./puzzle_solver -h
 
 # Key Features
+
 Command-line options:
 
 -p/--puzzle: Puzzle number (20-68)
@@ -34,9 +38,16 @@ Multi-threading with OpenMP
 
 Batched processing for better cache utilization
 
-
 The solver is designed to be both efficient and easy to use, with sensible defaults that can be overridden as needed.
 
+Idea Denevron !
 
-donation address : 
+dotation address :
+
+bc1qa3c5xdc6a3n2l3w0sq3vysustczpmlvhdwr8vc
+
+Thanks for the implementation nomachine!
+
+donation address :
+
 bc1qdwnxr7s08xwelpjy3cc52rrxg63xsmagv50fa8
