@@ -33,7 +33,7 @@ using namespace std;
 int PUZZLE_NUM = 20;
 int WORKERS = omp_get_num_procs();
 int FLIP_COUNT = -1; // Will be set based on puzzle number unless overridden
-const size_t REPORT_INTERVAL = 10000000;
+const __uint128_t REPORT_INTERVAL = 10000000;
 static constexpr int POINTS_BATCH_SIZE = 256;
 static constexpr int HASH_BATCH_SIZE = 8;
 
@@ -96,9 +96,12 @@ string TARGET_HASH160;
 Int BASE_KEY;
 atomic<bool> stop_event(false);
 mutex result_mutex;
-queue<tuple<string, size_t, int>> results;
-atomic<size_t> total_checked(0);
-size_t total_combinations = 0;
+queue<tuple<string, __uint128_t, int>> results;
+
+// 128-bit atomic counter implementation
+atomic<uint64_t> total_checked_high(0);
+atomic<uint64_t> total_checked_low(0);
+__uint128_t total_combinations = 0;
 vector<string> g_threadPrivateKeys;
 mutex progress_mutex;
 
@@ -108,6 +111,18 @@ atomic<uint64_t> localComparedCount(0);
 double globalElapsedTime = 0.0;
 double mkeysPerSec = 0.0;
 chrono::time_point<chrono::high_resolution_clock> tStart;
+
+// Helper functions
+__uint128_t load_128() {
+    return (static_cast<__uint128_t>(total_checked_high.load()) << 64) | total_checked_low.load();
+}
+
+void increment_128() {
+    uint64_t old_low = total_checked_low.fetch_add(1);
+    if (old_low == UINT64_MAX) {
+        total_checked_high.fetch_add(1);
+    }
+}
 
 static std::string formatElapsedTime(double seconds) {
     int hrs = static_cast<int>(seconds) / 3600;
@@ -120,6 +135,24 @@ static std::string formatElapsedTime(double seconds) {
     return oss.str();
 }
 
+// Helper function to convert 128-bit numbers to string
+static std::string to_string_128(__uint128_t value) {
+    if (value == 0) {
+        return "0";
+    }
+    
+    char buffer[50];
+    char* p = buffer + sizeof(buffer);
+    *--p = '\0';
+    
+    while (value != 0) {
+        *--p = "0123456789"[value % 10];
+        value /= 10;
+    }
+    
+    return std::string(p);
+}
+
 // Signal handler for clean shutdown
 void signalHandler(int signum) {
     stop_event.store(true);
@@ -128,27 +161,28 @@ void signalHandler(int signum) {
 
 class CombinationGenerator {
     int n, k;
-    vector<int> current;
+    std::vector<int> current;
     
 public:
     CombinationGenerator(int n, int k) : n(n), k(k), current(k) {
+        if (k > n) k = n;
         for (int i = 0; i < k; ++i) current[i] = i;
     }
 
-    static size_t combinations_count(int n, int k) {
+    static __uint128_t combinations_count(int n, int k) {
         if (k > n) return 0;
-        if (k * 2 > n) k = n - k;
+        if (k * 2 > n) k = n - k;  // Use symmetry
         if (k == 0) return 1;
 
-        size_t result = n;
+        __uint128_t result = n;
         for(int i = 2; i <= k; ++i) {
             result *= (n - i + 1);
-            result /= i;
+            result /= i;  // This division is always exact
         }
         return result;
     }
 
-    const vector<int>& get() const { return current; }
+    const std::vector<int>& get() const { return current; }
   
     bool next() {
         int i = k - 1;
@@ -161,17 +195,18 @@ public:
         return true;
     }
   
-    void unrank(size_t rank) {
-        if (rank >= combinations_count(n, k)) {
+    void unrank(__uint128_t rank) {
+        __uint128_t total = combinations_count(n, k);
+        if (rank >= total) {
             current.clear();
             return;
         }
         
         current.resize(k);
-        size_t remaining_rank = rank;
+        __uint128_t remaining_rank = rank;
         int a = n;
         int b = k;
-        size_t x = (combinations_count(n, k) - 1) - rank;
+        __uint128_t x = (total - 1) - rank;
         
         for (int i = 0; i < k; i++) {
             a = largest_a_where_comb_a_b_le_x(a, b, x);
@@ -182,7 +217,7 @@ public:
     }
   
 private:
-    int largest_a_where_comb_a_b_le_x(int a, int b, size_t x) const {
+    int largest_a_where_comb_a_b_le_x(int a, int b, __uint128_t x) const {
         while (a >= b && combinations_count(a, b) > x) {
             a--;
         }
@@ -190,7 +225,7 @@ private:
     }
 };
 
-inline void prepareShaBlock(const uint8_t* dataSrc, size_t dataLen, uint8_t* outBlock) {
+inline void prepareShaBlock(const uint8_t* dataSrc, __uint128_t dataLen, uint8_t* outBlock) {
     std::fill_n(outBlock, 64, 0);
     std::memcpy(outBlock, dataSrc, dataLen);
     outBlock[dataLen] = 0x80;
@@ -221,20 +256,20 @@ static void computeHash160BatchBinSingle(int numKeys,
     alignas(32) std::array<std::array<uint8_t, 64>, HASH_BATCH_SIZE> ripemdInputs;
     alignas(32) std::array<std::array<uint8_t, 20>, HASH_BATCH_SIZE> ripemdOutputs;
 
-    const size_t totalBatches = (numKeys + (HASH_BATCH_SIZE - 1)) / HASH_BATCH_SIZE;
+    const __uint128_t totalBatches = (numKeys + (HASH_BATCH_SIZE - 1)) / HASH_BATCH_SIZE;
 
-    for (size_t batch = 0; batch < totalBatches; batch++) {
-        const size_t batchCount = std::min<size_t>(HASH_BATCH_SIZE, numKeys - batch * HASH_BATCH_SIZE);
+    for (__uint128_t batch = 0; batch < totalBatches; batch++) {
+        const __uint128_t batchCount = std::min<__uint128_t>(HASH_BATCH_SIZE, numKeys - batch * HASH_BATCH_SIZE);
 
         // Prepare SHA-256 input blocks
-        for (size_t i = 0; i < batchCount; i++) {
+        for (__uint128_t i = 0; i < batchCount; i++) {
             prepareShaBlock(pubKeys[batch * HASH_BATCH_SIZE + i], 33, shaInputs[i].data());
         }
         
         if (batchCount < HASH_BATCH_SIZE) {
             static std::array<uint8_t, 64> shaPadding = {};
             prepareShaBlock(pubKeys[0], 33, shaPadding.data());
-            for (size_t i = batchCount; i < HASH_BATCH_SIZE; i++) {
+            for (__uint128_t i = batchCount; i < HASH_BATCH_SIZE; i++) {
                 std::memcpy(shaInputs[i].data(), shaPadding.data(), 64);
             }
         }
@@ -251,14 +286,14 @@ static void computeHash160BatchBinSingle(int numKeys,
                       outPtr[0], outPtr[1], outPtr[2], outPtr[3],
                       outPtr[4], outPtr[5], outPtr[6], outPtr[7]);
 
-        for (size_t i = 0; i < batchCount; i++) {
+        for (__uint128_t i = 0; i < batchCount; i++) {
             prepareRipemdBlock(shaOutputs[i].data(), ripemdInputs[i].data());
         }
 
         if (batchCount < HASH_BATCH_SIZE) {
             static std::array<uint8_t, 64> ripemdPadding = {};
             prepareRipemdBlock(shaOutputs[0].data(), ripemdPadding.data());
-            for (size_t i = batchCount; i < HASH_BATCH_SIZE; i++) {
+            for (__uint128_t i = batchCount; i < HASH_BATCH_SIZE; i++) {
                 std::memcpy(ripemdInputs[i].data(), ripemdPadding.data(), 64);
             }
         }
@@ -277,13 +312,13 @@ static void computeHash160BatchBinSingle(int numKeys,
             outPtr[4], outPtr[5], outPtr[6], outPtr[7]
         );
 
-        for (size_t i = 0; i < batchCount; i++) {
+        for (__uint128_t i = 0; i < batchCount; i++) {
             std::memcpy(hashResults[batch * HASH_BATCH_SIZE + i], ripemdOutputs[i].data(), 20);
         }
     }
 }
 
-void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, size_t start, size_t end) {
+void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, __uint128_t start, __uint128_t end) {
     const int fullBatchSize = 2 * POINTS_BATCH_SIZE;
     uint8_t localPubKeys[HASH_BATCH_SIZE][33];
     uint8_t localHashResults[HASH_BATCH_SIZE][20];
@@ -308,7 +343,7 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, size_
     CombinationGenerator gen(bit_length, flip_count);
     gen.unrank(start);
 
-    for (size_t count = start; !stop_event.load(); ) {
+    for (__uint128_t count = start; !stop_event.load(); ) {
         Int currentKey;
         currentKey.Set(&BASE_KEY);
         
@@ -454,19 +489,19 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, size_
                             hexKey = string(64 - hexKey.length(), '0') + hexKey;
                             
                             lock_guard<mutex> lock(result_mutex);
-                            results.push(make_tuple(hexKey, total_checked.load(), flip_count));
+                            results.push(make_tuple(hexKey, load_128(), flip_count));
                             stop_event.store(true);
                             return;
                         }
                     }
                 }
                 
-                // Count this as one combination checked
-                total_checked++;
+                increment_128();
                 localBatchCount = 0;
 
                 // Progress reporting
-                if (total_checked % REPORT_INTERVAL == 0 || count == end - 1) {
+                __uint128_t current_total = load_128();
+                if (current_total % REPORT_INTERVAL == 0 || count == end - 1) {
                     auto now = chrono::high_resolution_clock::now();
                     globalElapsedTime = chrono::duration<double>(now - tStart).count();
                     
@@ -474,19 +509,18 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, size_
                     localComparedCount = 0;
                     mkeysPerSec = (double)globalComparedCount / globalElapsedTime / 1e6;
                     
-                    double progress = min(100.0, (double)total_checked / total_combinations * 100.0);
+                    double progress = min(100.0, (double)current_total / total_combinations * 100.0);
                     
                     lock_guard<mutex> lock(progress_mutex);
                     cout << "\033[4A";
                     cout << "\033[0J";
                     cout << "Progress: " << fixed << setprecision(6) << progress << "%\n";
-                    cout << "Processed: " << total_checked << "\n";
+                    cout << "Processed: " << to_string_128(current_total) << "\n";
                     cout << "Speed: " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";
                     cout << "Elapsed Time: " << formatElapsedTime(globalElapsedTime) << "\n";
                     cout.flush();
 
-                    // Check if all combinations processed
-                    if (total_checked >= total_combinations) {
+                    if (current_total >= total_combinations) {
                         stop_event.store(true);
                         break;
                     }
@@ -505,7 +539,7 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, size_
     }
 
     // Final check when thread completes its range
-    if (!stop_event.load() && total_checked >= total_combinations) {
+    if (!stop_event.load() && load_128() >= total_combinations) {
         stop_event.store(true);
     }
 }
@@ -569,7 +603,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Initialize timing at the very start
     tStart = chrono::high_resolution_clock::now();
 
     Secp256K1 secp;
@@ -591,7 +624,7 @@ int main(int argc, char* argv[]) {
     TARGET_HASH160 = TARGET_HASH160_HEX;
     
     // Convert target hash to bytes
-    for (size_t i = 0; i < 20; i++) {
+    for (__uint128_t i = 0; i < 20; i++) {
         TARGET_HASH160_RAW[i] = stoul(TARGET_HASH160.substr(i * 2, 2), nullptr, 16);
     }
     
@@ -616,7 +649,7 @@ int main(int argc, char* argv[]) {
     
     // Format base key for display
     string paddedKey = BASE_KEY.GetBase16();
-    size_t firstNonZero = paddedKey.find_first_not_of('0');
+    __uint128_t firstNonZero = paddedKey.find_first_not_of('0');
     paddedKey = paddedKey.substr(firstNonZero);
     // Add 0x prefix
     paddedKey = "0x" + paddedKey;
@@ -633,25 +666,25 @@ int main(int argc, char* argv[]) {
         cout << "(override, default was " << DEFAULT_FLIP_COUNT << ")";
     }
     cout << "\n";
-    cout << "Total combinations: " << total_combinations << "\n";
+    cout << "Total combinations for C(" << PUZZLE_NUM << "," << FLIP_COUNT << "): " << to_string_128(total_combinations) << "\n";
     cout << "Using: " << WORKERS << " threads\n";
-    
+    cout << "\n";
     // Print empty lines for progress display
     cout << "Progress: 0.000000%\n";
-    cout << "Processed combinations:" << "\n";
-    cout << "Speed: " << "0.00 Mkeys/s\n";
+    cout << "Processed combinations: 0\n";
+    cout << "Speed: 0.00 Mkeys/s\n";
     cout << "Elapsed Time: 00:00:00\n";
 
     g_threadPrivateKeys.resize(WORKERS, "0");
     vector<thread> threads;
     
     // Distribute work evenly across threads
-    size_t comb_per_thread = total_combinations / WORKERS;
-    size_t remainder = total_combinations % WORKERS;
+    __uint128_t comb_per_thread = total_combinations / WORKERS;
+    __uint128_t remainder = total_combinations % WORKERS;
     
     for (int i = 0; i < WORKERS; i++) {
-        size_t start = i * comb_per_thread + min((size_t)i, remainder);
-        size_t end = start + comb_per_thread + (i < remainder ? 1 : 0);
+        __uint128_t start = i * comb_per_thread + min((__uint128_t)i, remainder);
+        __uint128_t end = start + comb_per_thread + (i < remainder ? 1 : 0);
         threads.emplace_back(worker, &secp, PUZZLE_NUM, FLIP_COUNT, i, start, end);
     }
     
@@ -667,14 +700,14 @@ int main(int argc, char* argv[]) {
         mkeysPerSec = (double)globalComparedCount / globalElapsedTime / 1e6;
 
         string compactHex = hex_key;
-        size_t firstNonZero = compactHex.find_first_not_of('0');
+        __uint128_t firstNonZero = compactHex.find_first_not_of('0');
         compactHex = "0x" + compactHex.substr(firstNonZero);
 
         cout << "=======================================\n";
         cout << "=========== SOLUTION FOUND ============\n";
         cout << "=======================================\n";
         cout << "Private key: " << compactHex << "\n";
-        cout << "Checked " << checked << " combinations\n";
+        cout << "Checked " << to_string_128(checked) << " combinations\n";
         cout << "Bit flips: " << flips << endl;
         cout << "Time: " << fixed << setprecision(2) << globalElapsedTime << " seconds (" 
              << formatElapsedTime(globalElapsedTime) << ")\n";
@@ -690,10 +723,11 @@ int main(int argc, char* argv[]) {
             cerr << "Failed to save solution to file!\n";
         }
     } else {
+        __uint128_t final_count = load_128();
         globalElapsedTime = chrono::duration<double>(chrono::high_resolution_clock::now() - tStart).count();
         mkeysPerSec = (double)globalComparedCount / globalElapsedTime / 1e6;
         
-        cout << "\n\nNo solution found. Checked " << total_checked << " combinations\n";
+        cout << "\n\nNo solution found. Checked " << to_string_128(load_128()) << " combinations\n";
         cout << "Time: " << fixed << setprecision(2) << globalElapsedTime << " seconds (" 
              << formatElapsedTime(globalElapsedTime) << ")\n";
         cout << "Speed: " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";
