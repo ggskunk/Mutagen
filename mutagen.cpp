@@ -458,6 +458,10 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
 
     AVXCounter count;
     count.store(start.load());
+    
+    // Performance tracking
+    uint64_t actual_work_done = 0;
+    auto last_report = chrono::high_resolution_clock::now();
 
     while (!stop_event.load() && count < end) {
         Int currentKey;
@@ -563,6 +567,9 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
 
             if (localBatchCount == HASH_BATCH_SIZE) {
                 computeHash160BatchBinSingle(localBatchCount, localPubKeys, localHashResults);
+                
+                // Count actual work (HASH_BATCH_SIZE keys checked)
+                actual_work_done += HASH_BATCH_SIZE;
                 localComparedCount += HASH_BATCH_SIZE;
 
                 for (int j = 0; j < HASH_BATCH_SIZE; j++) {
@@ -586,7 +593,13 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
                         if (fullMatch) {
                             auto tEndTime = chrono::high_resolution_clock::now();
                             globalElapsedTime = chrono::duration<double>(tEndTime - tStart).count();
-                            mkeysPerSec = (double)(globalComparedCount + localComparedCount) / globalElapsedTime / 1e6;
+                            
+                            // Report actual work done
+                            {
+                                lock_guard<mutex> lock(progress_mutex);
+                                globalComparedCount += actual_work_done;
+                                mkeysPerSec = (double)globalComparedCount / globalElapsedTime / 1e6;
+                            }
                             
                             Int foundKey;
                             foundKey.Set(&currentKey);
