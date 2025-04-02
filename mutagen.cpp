@@ -470,20 +470,12 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
         const vector<int>& flips = gen.get();
         
         // Apply flips
-        for (int pos : flips) {
+        for (int pos : flips)
+        {
             Int mask;
             mask.SetInt32(1);
             mask.ShiftL(pos);
-            
-            Int temp;
-            temp.Set(&currentKey);
-            temp.ShiftR(pos);
-            
-            if (temp.IsEven()) {
-                currentKey.Add(&mask);
-            } else {
-                currentKey.Sub(&mask);
-            }
+            currentKey.Xor(&mask); // Simple bit flip
         }
 
         // Verify key length
