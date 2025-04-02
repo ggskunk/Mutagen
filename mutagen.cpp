@@ -430,16 +430,16 @@ static void computeHash160BatchBinSingle(int numKeys,
 
 void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCounter start, AVXCounter end) {
     const int fullBatchSize = 2 * POINTS_BATCH_SIZE;
-    uint8_t localPubKeys[HASH_BATCH_SIZE][33];
-    uint8_t localHashResults[HASH_BATCH_SIZE][20];
-    int pointIndices[HASH_BATCH_SIZE];
+    alignas(32) uint8_t localPubKeys[HASH_BATCH_SIZE][33];
+    alignas(32) uint8_t localHashResults[HASH_BATCH_SIZE][20];
+    alignas(32) int pointIndices[HASH_BATCH_SIZE];
 
     // Precompute target hash for comparison
     __m256i target16 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(TARGET_HASH160_RAW.data()));
     
-    // Precompute points
-    vector<Point> plusPoints(POINTS_BATCH_SIZE);
-    vector<Point> minusPoints(POINTS_BATCH_SIZE);
+    // Precompute points with AVX2-aligned storage
+    alignas(32) Point plusPoints[POINTS_BATCH_SIZE];
+    alignas(32) Point minusPoints[POINTS_BATCH_SIZE];
     for (int i = 0; i < POINTS_BATCH_SIZE; i++) {
         Int tmp; tmp.SetInt32(i);
         plusPoints[i] = secp->ComputePublicKey(&tmp);
@@ -447,11 +447,11 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
         minusPoints[i].y.ModNeg();
     }
 
-    // Structure of Arrays
-    vector<Int> deltaX(POINTS_BATCH_SIZE);
+    // Structure of Arrays with AVX2 alignment
+    alignas(32) Int deltaX[POINTS_BATCH_SIZE];
     IntGroup modGroup(POINTS_BATCH_SIZE);
-    vector<Int> pointBatchX(fullBatchSize);
-    vector<Int> pointBatchY(fullBatchSize);
+    alignas(32) Int pointBatchX[fullBatchSize];
+    alignas(32) Int pointBatchY[fullBatchSize];
 
     CombinationGenerator gen(bit_length, flip_count);
     gen.unrank(start.load());
@@ -499,20 +499,20 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
         startPointXNeg.Set(&startPointX);
         startPointXNeg.ModNeg();
 
-        // Compute deltaX values in batches of 4 (optimized)
+        // Compute deltaX values in batches of 4
         for (int i = 0; i < POINTS_BATCH_SIZE; i += 4) {
             deltaX[i].ModSub(&plusPoints[i].x, &startPointX);
             deltaX[i+1].ModSub(&plusPoints[i+1].x, &startPointX);
             deltaX[i+2].ModSub(&plusPoints[i+2].x, &startPointX);
             deltaX[i+3].ModSub(&plusPoints[i+3].x, &startPointX);
         }
-        modGroup.Set(deltaX.data());
+        modGroup.Set(deltaX);
         modGroup.ModInv();
 
         // Process plus and minus points in batches
         for (int i = 0; i < POINTS_BATCH_SIZE; i += 4) {
+            // Process plus points (0..255)
             for (int j = 0; j < 4; j++) {
-                // Plus points (0..255)
                 Int deltaY; deltaY.ModSub(&plusPoints[i+j].y, &startPointY);
                 Int slope; slope.ModMulK1(&deltaY, &deltaX[i+j]);
                 Int slopeSq; slopeSq.ModSquareK1(&slope);
@@ -527,17 +527,19 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
                 pointBatchY[i+j].Set(&startPointY);
                 pointBatchY[i+j].ModNeg();
                 pointBatchY[i+j].ModAdd(&diffX);
+            }
 
-                // Minus points (256..511)
-                deltaY.ModSub(&minusPoints[i+j].y, &startPointY);
-                slope.ModMulK1(&deltaY, &deltaX[i+j]);
-                slopeSq.ModSquareK1(&slope);
+            // Process minus points (256..511)
+            for (int j = 0; j < 4; j++) {
+                Int deltaY; deltaY.ModSub(&minusPoints[i+j].y, &startPointY);
+                Int slope; slope.ModMulK1(&deltaY, &deltaX[i+j]);
+                Int slopeSq; slopeSq.ModSquareK1(&slope);
                 
                 pointBatchX[POINTS_BATCH_SIZE+i+j].Set(&startPointXNeg);
                 pointBatchX[POINTS_BATCH_SIZE+i+j].ModAdd(&slopeSq);
                 pointBatchX[POINTS_BATCH_SIZE+i+j].ModSub(&minusPoints[i+j].x);
                 
-                diffX.ModSub(&startPointX, &pointBatchX[POINTS_BATCH_SIZE+i+j]);
+                Int diffX; diffX.ModSub(&startPointX, &pointBatchX[POINTS_BATCH_SIZE+i+j]);
                 diffX.ModMulK1(&slope);
                 
                 pointBatchY[POINTS_BATCH_SIZE+i+j].Set(&startPointY);
@@ -565,16 +567,13 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
                 computeHash160BatchBinSingle(localBatchCount, localPubKeys, localHashResults);
                 localComparedCount += HASH_BATCH_SIZE;
 
+                // AVX2-optimized hash comparison
                 for (int j = 0; j < HASH_BATCH_SIZE; j++) {
-                    // Load candidate hash
                     __m256i cand = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(localHashResults[j]));
-                    
-                    // Compare first 4 bytes using AVX2
                     __m256i cmp = _mm256_cmpeq_epi8(cand, target16);
                     int mask = _mm256_movemask_epi8(cmp);
                     
-                    if ((mask & 0x0F) == 0x0F) {  // First 4 bytes match
-                        // Full comparison
+                    if ((mask & 0x0F) == 0x0F) {
                         bool fullMatch = true;
                         for (int k = 0; k < 20; k++) {
                             if (localHashResults[j][k] != TARGET_HASH160_RAW[k]) {
@@ -651,7 +650,6 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
         }
     }
 
-    // Final check when thread completes its range
     if (!stop_event.load() && total_checked_avx.load() >= total_combinations) {
         stop_event.store(true);
     }
