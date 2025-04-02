@@ -440,6 +440,8 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
     // Precompute points with AVX2-aligned storage
     alignas(32) Point plusPoints[POINTS_BATCH_SIZE];
     alignas(32) Point minusPoints[POINTS_BATCH_SIZE];
+    
+    // Precompute all points in a more cache-friendly way
     for (int i = 0; i < POINTS_BATCH_SIZE; i++) {
         Int tmp; tmp.SetInt32(i);
         plusPoints[i] = secp->ComputePublicKey(&tmp);
@@ -447,7 +449,7 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
         minusPoints[i].y.ModNeg();
     }
 
-    // Structure of Arrays with AVX2 alignment
+    // Storage for batch processing
     alignas(32) Int deltaX[POINTS_BATCH_SIZE];
     IntGroup modGroup(POINTS_BATCH_SIZE);
     alignas(32) Int pointBatchX[fullBatchSize];
@@ -470,12 +472,11 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
         const vector<int>& flips = gen.get();
         
         // Apply flips
-        for (int pos : flips)
-        {
+        for (int pos : flips) {
             Int mask;
             mask.SetInt32(1);
             mask.ShiftL(pos);
-            currentKey.Xor(&mask); // Simple bit flip
+            currentKey.Xor(&mask);
         }
 
         // Verify key length
@@ -487,7 +488,7 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
             g_threadPrivateKeys[threadId] = keyStr;
         }
 
-        // Compute public key and process in batches
+        // Compute public key
         Point startPoint = secp->ComputePublicKey(&currentKey);
         Int startPointX, startPointY, startPointXNeg;
         startPointX.Set(&startPoint.x);
@@ -495,7 +496,7 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
         startPointXNeg.Set(&startPointX);
         startPointXNeg.ModNeg();
 
-        // Compute deltaX values in batches of 4
+        // Compute deltaX values in batches with manual loop unrolling
         for (int i = 0; i < POINTS_BATCH_SIZE; i += 4) {
             deltaX[i].ModSub(&plusPoints[i].x, &startPointX);
             deltaX[i+1].ModSub(&plusPoints[i+1].x, &startPointX);
@@ -505,10 +506,10 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
         modGroup.Set(deltaX);
         modGroup.ModInv();
 
-        // Process plus and minus points in batches
+        // Process plus and minus points with manual loop unrolling
         for (int i = 0; i < POINTS_BATCH_SIZE; i += 4) {
+            // Process 4 plus points
             for (int j = 0; j < 4; j++) {
-                // Plus points (0..255)
                 Int deltaY; deltaY.ModSub(&plusPoints[i+j].y, &startPointY);
                 Int slope; slope.ModMulK1(&deltaY, &deltaX[i+j]);
                 Int slopeSq; slopeSq.ModSquareK1(&slope);
@@ -523,17 +524,19 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
                 pointBatchY[i+j].Set(&startPointY);
                 pointBatchY[i+j].ModNeg();
                 pointBatchY[i+j].ModAdd(&diffX);
+            }
 
-                // Minus points (256..511)
-                deltaY.ModSub(&minusPoints[i+j].y, &startPointY);
-                slope.ModMulK1(&deltaY, &deltaX[i+j]);
-                slopeSq.ModSquareK1(&slope);
+            // Process 4 minus points
+            for (int j = 0; j < 4; j++) {
+                Int deltaY; deltaY.ModSub(&minusPoints[i+j].y, &startPointY);
+                Int slope; slope.ModMulK1(&deltaY, &deltaX[i+j]);
+                Int slopeSq; slopeSq.ModSquareK1(&slope);
                 
                 pointBatchX[POINTS_BATCH_SIZE+i+j].Set(&startPointXNeg);
                 pointBatchX[POINTS_BATCH_SIZE+i+j].ModAdd(&slopeSq);
                 pointBatchX[POINTS_BATCH_SIZE+i+j].ModSub(&minusPoints[i+j].x);
                 
-                diffX.ModSub(&startPointX, &pointBatchX[POINTS_BATCH_SIZE+i+j]);
+                Int diffX; diffX.ModSub(&startPointX, &pointBatchX[POINTS_BATCH_SIZE+i+j]);
                 diffX.ModMulK1(&slope);
                 
                 pointBatchY[POINTS_BATCH_SIZE+i+j].Set(&startPointY);
