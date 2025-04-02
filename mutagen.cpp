@@ -433,6 +433,9 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
     uint8_t localPubKeys[HASH_BATCH_SIZE][33];
     uint8_t localHashResults[HASH_BATCH_SIZE][20];
     int pointIndices[HASH_BATCH_SIZE];
+
+    // Precompute target hash for comparison
+    __m256i target16 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(TARGET_HASH160_RAW.data()));
     
     // Precompute points
     vector<Point> plusPoints(POINTS_BATCH_SIZE);
@@ -560,20 +563,18 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
 
             if (localBatchCount == HASH_BATCH_SIZE) {
                 computeHash160BatchBinSingle(localBatchCount, localPubKeys, localHashResults);
-                
-                // Update comparison count
                 localComparedCount += HASH_BATCH_SIZE;
-                
-                __m256i target = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(TARGET_HASH160_RAW.data()));
 
                 for (int j = 0; j < HASH_BATCH_SIZE; j++) {
-                    __m256i result = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(localHashResults[j]));
+                    // Load candidate hash
+                    __m256i cand = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(localHashResults[j]));
                     
-                    int mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(result, target));
+                    // Compare first 4 bytes using AVX2
+                    __m256i cmp = _mm256_cmpeq_epi8(cand, target16);
+                    int mask = _mm256_movemask_epi8(cmp);
                     
-                    const int HASH160_MASK = (1 << 20) - 1;
-                    
-                    if ((mask & HASH160_MASK) == HASH160_MASK) {
+                    if ((mask & 0x0F) == 0x0F) {  // First 4 bytes match
+                        // Full comparison
                         bool fullMatch = true;
                         for (int k = 0; k < 20; k++) {
                             if (localHashResults[j][k] != TARGET_HASH160_RAW[k]) {
@@ -581,7 +582,7 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
                                 break;
                             }
                         }
-                        
+
                         if (fullMatch) {
                             auto tEndTime = chrono::high_resolution_clock::now();
                             globalElapsedTime = chrono::duration<double>(tEndTime - tStart).count();
