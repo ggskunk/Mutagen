@@ -511,8 +511,8 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
 
         // Process plus and minus points in batches
         for (int i = 0; i < POINTS_BATCH_SIZE; i += 4) {
-            // Process plus points (0..255)
             for (int j = 0; j < 4; j++) {
+                // Plus points (0..255)
                 Int deltaY; deltaY.ModSub(&plusPoints[i+j].y, &startPointY);
                 Int slope; slope.ModMulK1(&deltaY, &deltaX[i+j]);
                 Int slopeSq; slopeSq.ModSquareK1(&slope);
@@ -527,19 +527,17 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
                 pointBatchY[i+j].Set(&startPointY);
                 pointBatchY[i+j].ModNeg();
                 pointBatchY[i+j].ModAdd(&diffX);
-            }
 
-            // Process minus points (256..511)
-            for (int j = 0; j < 4; j++) {
-                Int deltaY; deltaY.ModSub(&minusPoints[i+j].y, &startPointY);
-                Int slope; slope.ModMulK1(&deltaY, &deltaX[i+j]);
-                Int slopeSq; slopeSq.ModSquareK1(&slope);
+                // Minus points (256..511)
+                deltaY.ModSub(&minusPoints[i+j].y, &startPointY);
+                slope.ModMulK1(&deltaY, &deltaX[i+j]);
+                slopeSq.ModSquareK1(&slope);
                 
                 pointBatchX[POINTS_BATCH_SIZE+i+j].Set(&startPointXNeg);
                 pointBatchX[POINTS_BATCH_SIZE+i+j].ModAdd(&slopeSq);
                 pointBatchX[POINTS_BATCH_SIZE+i+j].ModSub(&minusPoints[i+j].x);
                 
-                Int diffX; diffX.ModSub(&startPointX, &pointBatchX[POINTS_BATCH_SIZE+i+j]);
+                diffX.ModSub(&startPointX, &pointBatchX[POINTS_BATCH_SIZE+i+j]);
                 diffX.ModMulK1(&slope);
                 
                 pointBatchY[POINTS_BATCH_SIZE+i+j].Set(&startPointY);
@@ -567,13 +565,16 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
                 computeHash160BatchBinSingle(localBatchCount, localPubKeys, localHashResults);
                 localComparedCount += HASH_BATCH_SIZE;
 
-                // AVX2-optimized hash comparison
                 for (int j = 0; j < HASH_BATCH_SIZE; j++) {
+                    // Load candidate hash
                     __m256i cand = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(localHashResults[j]));
+                    
+                    // Compare first 4 bytes using AVX2
                     __m256i cmp = _mm256_cmpeq_epi8(cand, target16);
                     int mask = _mm256_movemask_epi8(cmp);
                     
-                    if ((mask & 0x0F) == 0x0F) {
+                    if ((mask & 0x0F) == 0x0F) {  // First 4 bytes match
+                        // Full comparison
                         bool fullMatch = true;
                         for (int k = 0; k < 20; k++) {
                             if (localHashResults[j][k] != TARGET_HASH160_RAW[k]) {
@@ -650,6 +651,7 @@ void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCo
         }
     }
 
+    // Final check when thread completes its range
     if (!stop_event.load() && total_checked_avx.load() >= total_combinations) {
         stop_event.store(true);
     }
