@@ -70,56 +70,103 @@ void moveCursorTo(int x, int y) {
 }
 
 // Configuration defaults
-int PUZZLE_NUM = -1; // Initialize to invalid to force user input via -p
+int PUZZLE_NUM = 69; // *** DEĞİŞTİRİLDİ: Varsayılan puzzle numarası 69 olarak ayarlandı ***
 int WORKERS = omp_get_num_procs();
 int FLIP_COUNT = -1; // Will be set based on puzzle number unless overridden
 const __uint128_t REPORT_INTERVAL = 10000000;
 static constexpr int POINTS_BATCH_SIZE = 256;
 static constexpr int HASH_BATCH_SIZE = 8;
 
-// Historical puzzle data (puzzle number: {flip count, target hash, private key decimal})
 const unordered_map<int, tuple<int, string, string>> PUZZLE_DATA = {
     {20, {8, "b907c3a2a3b27789dfb509b730dd47703c272868",  "357535"}},
-    {68, {34, "e0b8a2baee1b77fc703455f39d51477451fc8cfc", "132656943602386256302"}}
-    // Add other puzzle data here if needed
+    {21, {9, "29a78213caa9eea824acf08022ab9dfc83414f56",  "863317"}},
+    {22, {11, "7ff45303774ef7a52fffd8011981034b258cb86b", "1811764"}},
+    {23, {12, "d0a79df189fe1ad5c306cc70497b358415da579e", "3007503"}},
+    {24, {9, "0959e80121f36aea13b3bad361c15dac26189e2f",  "5598802"}},
+    {25, {12, "2f396b29b27324300d0c59b17c3abc1835bd3dbb", "14428676"}},
+    {26, {14, "bfebb73562d4541b32a02ba664d140b5a574792f", "33185509"}},
+    {27, {13, "0c7aaf6caa7e5424b63d317f0f8f1f9fa40d5560", "54538862"}},
+    {28, {16, "1306b9e4ff56513a476841bac7ba48d69516b1da", "111949941"}},
+    {29, {18, "5a416cc9148f4a377b672c8ae5d3287adaafadec", "227634408"}},
+    {30, {16, "d39c4704664e1deb76c9331e637564c257d68a08", "400708894"}},
+    {31, {13, "d805f6f251f7479ebd853b3d0f4b9b2656d92f1d", "1033162084"}},
+    {32, {14, "9e42601eeaedc244e15f17375adb0e2cd08efdc9", "2102388551"}},
+    {33, {15, "4e15e5189752d1eaf444dfd6bff399feb0443977", "3093472814"}},
+    {34, {16, "f6d67d7983bf70450f295c9cb828daab265f1bfa", "7137437912"}},
+    {35, {19, "f6d8ce225ffbdecec170f8298c3fc28ae686df25", "14133072157"}},
+    {36, {14, "74b1e012be1521e5d8d75e745a26ced845ea3d37", "20112871792"}},
+    {37, {23, "28c30fb11ed1da72e7c4f89c0164756e8a021d",   "42387769980"}}, // Hata düzeltmesi: Bu 37 olmalıydı, 36 değil
+    {38, {21, "b190e2d40cfdeee2cee072954a2be89e7ba39364", "100251560595"}},
+    {39, {23, "0b304f2a79a027270276533fe1ed4eff30910876", "146971536592"}},
+    {40, {20, "95a156cd21b4a69de969eb6716864f4c8b82a82a", "323724968937"}},
+    {41, {25, "d1562eb37357f9e6fc41cb2359f4d3eda4032329", "1003651412950"}},
+    {42, {24, "8efb85f9c5b5db2d55973a04128dc7510075ae23", "1458252205147"}},
+    {43, {19, "f92044c7924e5525c61207972c253c9fc9f086f7", "2895374552463"}},
+    {44, {24, "80df54e1f612f2fc5bdc05c9d21a83aa8d20791e", "7409811047825"}},
+    {45, {21, "f0225bfc68a6e17e87cd8b5e60ae3be18f120753", "15404761757071"}},
+    {46, {24, "9a012260d01c5113df66c8a8438c9f7a1e3d5dac", "19996463086597"}},
+    {47, {27, "f828005d41b0f4fed4c8dca3b06011072cfb07d4", "51408670348612"}},
+    {48, {21, "8661cb56d9df0a61f01328b55af7e56a3fe7a2b2", "119666659114170"}},
+    {49, {30, "0d2f533966c6578e1111978ca698f8add7fffdf3", "191206974700443"}},
+    {50, {29, "de081b76f840e462fa2cdf360173dfaf4a976a47", "409118905032525"}},
+    {51, {25, "ef6419cffd7fad7027994354eb8efae223c2dbe7", "611140496167764"}},
+    {52, {27, "36af659edbe94453f6344e920d143f1778653ae7", "2058769515153876"}},
+    {53, {26, "2f4870ef54fa4b048c1365d42594cc7d3d269551", "4216495639600700"}},
+    {54, {30, "cb66763cf7fde659869ae7f06884d9a0f879a092", "6763683971478124"}},
+    {55, {31, "db53d9bbd1f3a83b094eeca7dd970bd85b492fa2", "9974455244496707"}},
+    {56, {31, "48214c5969ae9f43f75070cea1e2cb41d5bdcccd", "30045390491869460"}},
+    {57, {33, "328660ef43f66abe2653fa178452a5dfc594c2a1", "44218742292676575"}},
+    {58, {28, "8c2a6071f89c90c4dab5ab295d7729d1b54ea60f", "138245758910846492"}},
+    {59, {30, "b14ed3146f5b2c9bde1703deae9ef33af8110210", "199976667976342049"}},
+    {60, {31, "cdf8e5c7503a9d22642e3ecfc87817672787b9c5", "525070384258266191"}},
+    {61, {25, "68133e19b2dfb9034edf9830a200cfdf38c90cbd", "1135041350219496382"}},
+    {62, {35, "e26646db84b0602f32b34b5a62ca3cae1f91b779", "1425787542618654982"}},
+    {63, {34, "ef58afb697b094423ce90721fbb19a359ef7c50e", "3908372542507822062"}},
+    {64, {34, "3ee4133d991f52fdf6a25c9834e0745ac74248a4", "8993229949524469768"}},
+    {65, {37, "52e763a7ddc1aa4fa811578c491c1bc7fd570137", "17799667357578236628"}},
+    {66, {35, "20d45a6a762535700ce9e0b216e31994335db8a5", "30568377312064202855"}},
+    {67, {31, "739437bb3dd6d1983e66629c5f08c70e52769371", "46346217550346335726"}},
+    {68, {34, "e0b8a2baee1b77fc703455f39d51477451fc8cfc", "132656943602386256302"}},
+    {69, {35, "61eb8a50c86b0584bb727dd65bed8d2400d6d5aa", "219898266213316039825"}}
 };
 
 // Global variables
 vector<unsigned char> TARGET_HASH160_RAW(20);
 string TARGET_HASH160;
-Int BASE_KEY; // This will be set based on puzzle or manual input
+Int BASE_KEY;
 atomic<bool> stop_event(false);
 mutex result_mutex;
-queue<tuple<string, __uint128_t, int>> results; // Stores {hex_key, combination_index, flip_count}
+queue<tuple<string, __uint128_t, int>> results;
 
 // AVX2 128-bit counter implementation
 union AVXCounter {
     __m256i vec;
     uint64_t u64[4];
     __uint128_t u128[2];
-
-    AVXCounter() : vec(_mm256_setzero_si256()) {}
+AVXCounter() : vec(_mm256_setzero_si256()) {}
 
     AVXCounter(__uint128_t value) {
         store(value);
     }
 
     void increment() {
+        // [0] = low 64 bits, [1] = high 64 bits
         __m256i one = _mm256_set_epi64x(0, 0, 0, 1);
         vec = _mm256_add_epi64(vec, one);
-        if (u64[0] == 0) { // Check low 64 bits for carry
+
+        // Check for carry
+        if (u64[0] == 0) { // If low 64 bits wrapped around
             __m256i carry = _mm256_set_epi64x(0, 0, 1, 0);
             vec = _mm256_add_epi64(vec, carry);
         }
     }
 
     void add(__uint128_t value) {
-        __uint128_t low_add = value & 0xFFFFFFFFFFFFFFFFULL;
-        __uint128_t high_add = value >> 64;
-        __m256i add_val = _mm256_set_epi64x(0, 0, high_add, low_add);
-        __uint128_t old_low = u64[0]; // Store old low value before add
+        __m256i add_val = _mm256_set_epi64x(0, 0, value >> 64, value);
         vec = _mm256_add_epi64(vec, add_val);
-        if (u64[0] < old_low) { // Check for carry out of low 64 bits
+
+        // Handle carry
+        if (u64[0] < (value & 0xFFFFFFFFFFFFFFFFULL)) {
             __m256i carry = _mm256_set_epi64x(0, 0, 1, 0);
             vec = _mm256_add_epi64(vec, carry);
         }
@@ -143,10 +190,13 @@ union AVXCounter {
     }
 
     bool operator>=(const AVXCounter& other) const {
-        return !(*this < other);
+        if (u64[1] != other.u64[1])
+            return u64[1] > other.u64[1];
+        return u64[0] >= other.u64[0];
     }
 
     static AVXCounter div(const AVXCounter& num, uint64_t denom) {
+        // 128-bit division emulation
         __uint128_t n = num.load();
         __uint128_t q = n / denom;
         return AVXCounter(q);
@@ -163,13 +213,17 @@ union AVXCounter {
     }
 };
 
-// Global counters and performance variables
+static AVXCounter total_checked_avx;
 __uint128_t total_combinations = 0;
-atomic<uint64_t> globalComparedCount(0); // Total keys checked across all threads
-chrono::time_point<chrono::high_resolution_clock> tStart;
+vector<string> g_threadPrivateKeys;
+mutex progress_mutex;
+
+// Performance tracking variables
+atomic<uint64_t> globalComparedCount(0);
+atomic<uint64_t> localComparedCount(0);
 double globalElapsedTime = 0.0;
 double mkeysPerSec = 0.0;
-mutex progress_mutex; // Mutex for updating the terminal progress display
+chrono::time_point<chrono::high_resolution_clock> tStart;
 
 // Helper functions
 static std::string formatElapsedTime(double seconds) {
@@ -183,888 +237,632 @@ static std::string formatElapsedTime(double seconds) {
     return oss.str();
 }
 
+// Helper function to convert 128-bit numbers to string
 static std::string to_string_128(__uint128_t value) {
     if (value == 0) return "0";
-    std::string str;
-    while (value > 0) {
-        str += char('0' + (value % 10));
+    char buffer[50];
+    char* p = buffer + sizeof(buffer);
+    *--p = '\0';
+    while (value != 0) {
+        *--p = "0123456789"[value % 10];
         value /= 10;
     }
-    std::reverse(str.begin(), str.end());
-    return str.empty() ? "0" : str;
+
+    return std::string(p);
 }
 
 // Signal handler for clean shutdown
 void signalHandler(int signum) {
     stop_event.store(true);
-    cout << "\nInterrupt received (" << signum << "), shutting down gracefully...\n";
+    cout << "\nInterrupt received, shutting down...\n";
 }
 
-// Combination generator class
 class CombinationGenerator {
     int n, k;
     std::vector<int> current;
 public:
     CombinationGenerator(int n, int k) : n(n), k(k), current(k) {
-        if (k > n || k < 0) k = 0; // Handle invalid k
-        this->k = k; // Store potentially adjusted k
-        this->n = n; // Store n
-        if (k > 0) { // Initialize only if k > 0
-             for (int i = 0; i < k; ++i) current[i] = i;
-        } else {
-             current.clear(); // Ensure current is empty for k=0
-        }
+        if (k > n) k = n;
+        for (int i = 0; i < k; ++i) current[i] = i;
     }
 
     static __uint128_t combinations_count(int n, int k) {
-        if (k < 0 || k > n) return 0;
-        if (k == 0 || k == n) return 1;
-        if (k > n / 2) k = n - k;
+        if (k > n) return 0;
+        if (k * 2 > n) k = n - k; // Use symmetry
+        if (k == 0) return 1;
 
-        __uint128_t result = 1;
-        for(int i = 1; i <= k; ++i) {
-            // Check potential overflow before multiplication
-            unsigned __int128 temp_res;
-            if (__builtin_mul_overflow(result, (unsigned __int128)(n - i + 1), &temp_res)) {
-                cerr << "\nWarning: Combination count overflow detected (n=" << n << ", k=" << i << ").\n";
-                return -1; // Indicate overflow error
-            }
-            result = temp_res;
-
-            // Check potential division by zero (shouldn't happen if k >= 1)
-            if (i == 0) {
-                cerr << "\nError: Division by zero in combinations_count.\n";
-                return -1; // Indicate error
-            }
-            result /= i;
+        __uint128_t result = n;
+        for(int i = 2; i <= k; ++i) {
+            result *= (n - i + 1);
+            result /= i;  // This division is always exact
         }
         return result;
+    }
+
+    // AVX2 optimized version that calculates 4 combinations at once
+    static __m256i combinations_count_avx(int n, int k) {
+        alignas(32) uint64_t counts[4];
+        for (int i = 0; i < 4; i++) {
+            counts[i] = combinations_count(n + i, k);
+        }
+        return _mm256_load_si256((__m256i*)counts);
     }
 
     const std::vector<int>& get() const { return current; }
 
     bool next() {
-        if (k <= 0 || k > n) return false; // No next if k is invalid or 0
         int i = k - 1;
         while (i >= 0 && current[i] == n - k + i) --i;
-        if (i < 0) return false; // Last combination reached
+        if (i < 0) return false;
 
         ++current[i];
         for (int j = i + 1; j < k; ++j)
-            current[j] = current[j - 1] + 1;
+            current[j] = current[j-1] + 1;
         return true;
     }
 
     void unrank(__uint128_t rank) {
-        if (k <= 0 || k > n) {
-            current.clear();
-            return; // Handle invalid k
-        }
         __uint128_t total = combinations_count(n, k);
-         if (rank >= total && total != static_cast<__uint128_t>(-1)) { // Check rank validity, ignore if total overflowed
-            cerr << "\nWarning: Rank " << to_string_128(rank) << " is out of bounds (total combinations: " << to_string_128(total) << "). Cannot unrank.\n";
-             current.clear(); // Or set to a default state?
-             // Setting to first combination might be an option, but clear indicates failure.
-             // for (int i = 0; i < k; ++i) current[i] = i; // Reset to first? No, clear is better.
-             return;
+        if (rank >= total) {
+            current.clear();
+            return;
         }
 
         current.resize(k);
         __uint128_t remaining_rank = rank;
-        int current_n = n;
-        int current_k = k;
-        int last_pivot = -1; // Keep track of the last chosen element's index relative to original n
-
-        for (int i = 0; i < k; ++i) {
-            if (current_k <= 0 || current_n < current_k) {
-                 // Should not happen if rank is valid, but good for safety
-                 cerr << "\nError: Invalid state in unrank (n=" << current_n << ", k=" << current_k << ").\n";
-                 current.clear();
-                 return;
-            }
-
-            int pivot = 0; // Element index relative to current_n
-            while (true) {
-                if (current_n - pivot < current_k) { // Check if enough elements remain
-                     cerr << "\nError: Logic error during unrank pivot search (n=" << current_n << ", k=" << current_k << ", pivot=" << pivot <<"). Rank was " << to_string_128(rank) << "\n";
-                     current.clear();
-                     return; // Cannot form combination, indicates error
-                }
-                 __uint128_t comb = combinations_count(current_n - pivot - 1, current_k - 1);
-                 if (comb == static_cast<__uint128_t>(-1)) { // Handle combination calculation overflow during unrank
-                     cerr << "\nError: Combination count overflow during unrank.\n";
-                     current.clear();
-                     return;
-                 }
-                 if (remaining_rank < comb) break; // Found the correct pivot range
-
-                 remaining_rank -= comb;
-                 pivot++;
-            }
-            current[i] = pivot + last_pivot + 1; // Calculate absolute index
-            last_pivot = current[i]; // Update last absolute index
-            current_n -= (pivot + 1); // Reduce n for the next iteration
-            current_k--; // Reduce k
+        int a = n;
+        int b = k;
+        __uint128_t x = (total - 1) - rank;
+        for (int i = 0; i < k; i++) {
+            a = largest_a_where_comb_a_b_le_x(a, b, x);
+            current[i] = (n - 1) - a;
+            x -= combinations_count(a, b);
+            b--;
         }
+    }
+
+private:
+    int largest_a_where_comb_a_b_le_x(int a, int b, __uint128_t x) const {
+        while (a >= b && combinations_count(a, b) > x) {
+            a--;
+        }
+        return a;
     }
 };
 
-// Hashing helper functions
-inline void prepareShaBlock(const uint8_t* dataSrc, size_t dataLen, uint8_t* outBlock) {
+inline void prepareShaBlock(const uint8_t* dataSrc, __uint128_t dataLen, uint8_t* outBlock) {
     std::fill_n(outBlock, 64, 0);
     std::memcpy(outBlock, dataSrc, dataLen);
     outBlock[dataLen] = 0x80;
-    uint64_t bitLen = static_cast<uint64_t>(dataLen) * 8;
-    // Place the 64-bit length in big-endian order (standard for SHA)
-    for(int i = 0; i < 8; ++i) {
-        outBlock[63 - i] = (uint8_t)(bitLen >> (i * 8));
-    }
-    // Note: Assumes dataLen <= 55, no need for extra padding block for pubkeys (33 bytes)
+    const uint32_t bitLen = (uint32_t)(dataLen * 8);
+    outBlock[60] = (uint8_t)((bitLen >> 24) & 0xFF);
+    outBlock[61] = (uint8_t)((bitLen >> 16) & 0xFF);
+    outBlock[62] = (uint8_t)((bitLen >>  8) & 0xFF);
+    outBlock[63] = (uint8_t)( bitLen        & 0xFF);
 }
 
-inline void prepareRipemdBlock(const uint8_t* dataSrc32Bytes, uint8_t* outBlock) {
+inline void prepareRipemdBlock(const uint8_t* dataSrc, uint8_t* outBlock) {
     std::fill_n(outBlock, 64, 0);
-    std::memcpy(outBlock, dataSrc32Bytes, 32); // RIPEMD input is SHA256 output (32 bytes)
+    std::memcpy(outBlock, dataSrc, 32);
     outBlock[32] = 0x80;
-    const uint64_t bitLen = 256; // SHA256 output is always 256 bits
-    // Place the 64-bit length in little-endian order (standard for RIPEMD)
-    for(int i = 0; i < 8; ++i) {
-        outBlock[56 + i] = (uint8_t)(bitLen >> (i * 8));
-    }
+    const uint32_t bitLen = 256;
+    outBlock[60] = (uint8_t)((bitLen >> 24) & 0xFF);
+    outBlock[61] = (uint8_t)((bitLen >> 16) & 0xFF);
+    outBlock[62] = (uint8_t)((bitLen >>  8) & 0xFF);
+    outBlock[63] = (uint8_t)( bitLen        & 0xFF);
 }
 
-// Optimized HASH160 function using AVX2 batching
 static void computeHash160BatchBinSingle(int numKeys,
                                        uint8_t pubKeys[][33],
                                        uint8_t hashResults[][20])
 {
-    if (numKeys <= 0) return; // Nothing to do
-
     alignas(32) std::array<std::array<uint8_t, 64>, HASH_BATCH_SIZE> shaInputs;
     alignas(32) std::array<std::array<uint8_t, 32>, HASH_BATCH_SIZE> shaOutputs;
     alignas(32) std::array<std::array<uint8_t, 64>, HASH_BATCH_SIZE> ripemdInputs;
     alignas(32) std::array<std::array<uint8_t, 20>, HASH_BATCH_SIZE> ripemdOutputs;
-
-    // Pre-calculate padding blocks if needed (only once)
-    static std::array<uint8_t, 64> shaPaddingBlock;
-    static std::array<uint8_t, 64> ripemdPaddingBlock;
-    static bool paddingInitialized = false;
-    if (!paddingInitialized) {
-         // Use a dummy pubkey structure for padding calculation
-         uint8_t dummyPubkey[33] = {0x02}; // Minimal valid structure
-         prepareShaBlock(dummyPubkey, 33, shaPaddingBlock.data());
-         uint8_t dummyShaOut[32] = {0}; // Dummy SHA output
-         prepareRipemdBlock(dummyShaOut, ripemdPaddingBlock.data());
-         paddingInitialized = true;
-    }
-
-
-    const int numBatches = (numKeys + (HASH_BATCH_SIZE - 1)) / HASH_BATCH_SIZE;
-
-    for (int batch = 0; batch < numBatches; batch++) {
-        const int batchStart = batch * HASH_BATCH_SIZE;
-        const int batchCount = std::min(HASH_BATCH_SIZE, numKeys - batchStart);
-
+    const __uint128_t totalBatches = (numKeys + (HASH_BATCH_SIZE - 1)) / HASH_BATCH_SIZE;
+    for (__uint128_t batch = 0; batch < totalBatches; batch++) {
+        const __uint128_t batchCount = std::min<__uint128_t>(HASH_BATCH_SIZE, numKeys - batch * HASH_BATCH_SIZE);
         // Prepare SHA-256 input blocks
-        for (int i = 0; i < batchCount; i++) {
-            prepareShaBlock(pubKeys[batchStart + i], 33, shaInputs[i].data());
+        for (__uint128_t i = 0; i < batchCount; i++) {
+            prepareShaBlock(pubKeys[batch * HASH_BATCH_SIZE + i], 33, shaInputs[i].data());
         }
-        // Pad remaining slots if the last batch is not full
-        for (int i = batchCount; i < HASH_BATCH_SIZE; i++) {
-             std::memcpy(shaInputs[i].data(), shaPaddingBlock.data(), 64);
+
+        if (batchCount < HASH_BATCH_SIZE) {
+            static std::array<uint8_t, 64> shaPadding = {};
+            prepareShaBlock(pubKeys[0], 33, shaPadding.data());
+            for (__uint128_t i = batchCount; i < HASH_BATCH_SIZE; i++) {
+                std::memcpy(shaInputs[i].data(), shaPadding.data(), 64);
+            }
         }
 
         const uint8_t* inPtr[HASH_BATCH_SIZE];
-        uint8_t* outPtrSha[HASH_BATCH_SIZE];
+        uint8_t* outPtr[HASH_BATCH_SIZE];
         for (int i = 0; i < HASH_BATCH_SIZE; i++) {
             inPtr[i]  = shaInputs[i].data();
-            outPtrSha[i] = shaOutputs[i].data();
+            outPtr[i] = shaOutputs[i].data();
         }
 
-        // Perform SHA256 for the batch
         sha256avx2_8B(inPtr[0], inPtr[1], inPtr[2], inPtr[3],
                       inPtr[4], inPtr[5], inPtr[6], inPtr[7],
-                      outPtrSha[0], outPtrSha[1], outPtrSha[2], outPtrSha[3],
-                      outPtrSha[4], outPtrSha[5], outPtrSha[6], outPtrSha[7]);
+                      outPtr[0], outPtr[1], outPtr[2], outPtr[3],
+                      outPtr[4], outPtr[5], outPtr[6], outPtr[7]);
 
-        // Prepare RIPEMD-160 input blocks from SHA outputs
-        for (int i = 0; i < batchCount; i++) {
+        for (__uint128_t i = 0; i < batchCount; i++) {
             prepareRipemdBlock(shaOutputs[i].data(), ripemdInputs[i].data());
         }
-        // Pad remaining slots for RIPEMD if needed
-         for (int i = batchCount; i < HASH_BATCH_SIZE; i++) {
-             std::memcpy(ripemdInputs[i].data(), ripemdPaddingBlock.data(), 64);
-         }
 
-        uint8_t* outPtrRipemd[HASH_BATCH_SIZE];
-        for (int i = 0; i < HASH_BATCH_SIZE; i++) {
-            inPtr[i]  = ripemdInputs[i].data(); // Input is now RIPEMD inputs
-            outPtrRipemd[i] = ripemdOutputs[i].data();
+        if (batchCount < HASH_BATCH_SIZE) {
+            static std::array<uint8_t, 64> ripemdPadding = {};
+            prepareRipemdBlock(shaOutputs[0].data(), ripemdPadding.data());
+            for (__uint128_t i = batchCount; i < HASH_BATCH_SIZE; i++) {
+                std::memcpy(ripemdInputs[i].data(), ripemdPadding.data(), 64);
+            }
         }
 
-        // Perform RIPEMD160 for the batch
-         ripemd160avx2::ripemd160avx2_32(
+        for (int i = 0; i < HASH_BATCH_SIZE; i++) {
+            inPtr[i]  = ripemdInputs[i].data();
+            outPtr[i] = ripemdOutputs[i].data();
+        }
+
+        ripemd160avx2::ripemd160avx2_32(
             (unsigned char*)inPtr[0], (unsigned char*)inPtr[1],
             (unsigned char*)inPtr[2], (unsigned char*)inPtr[3],
             (unsigned char*)inPtr[4], (unsigned char*)inPtr[5],
             (unsigned char*)inPtr[6], (unsigned char*)inPtr[7],
-            outPtrRipemd[0], outPtrRipemd[1], outPtrRipemd[2], outPtrRipemd[3],
-            outPtrRipemd[4], outPtrRipemd[5], outPtrRipemd[6], outPtrRipemd[7]
+            outPtr[0], outPtr[1], outPtr[2], outPtr[3],
+            outPtr[4], outPtr[5],
+            outPtr[6], outPtr[7]
         );
 
-        // Copy results for the valid keys in the batch
-        for (int i = 0; i < batchCount; i++) {
-            std::memcpy(hashResults[batchStart + i], ripemdOutputs[i].data(), 20);
+        for (__uint128_t i = 0; i < batchCount; i++) {
+            std::memcpy(hashResults[batch * HASH_BATCH_SIZE + i], ripemdOutputs[i].data(), 20);
         }
     }
 }
 
-// Worker thread function
-void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCounter start_rank, AVXCounter end_rank) {
-    const int fullBatchSize = 2 * POINTS_BATCH_SIZE; // Points generated per combination (plus and minus)
+void worker(Secp256K1* secp, int bit_length, int flip_count, int threadId, AVXCounter start, AVXCounter end) {
+    const int fullBatchSize = 2 * POINTS_BATCH_SIZE;
     alignas(32) uint8_t localPubKeys[HASH_BATCH_SIZE][33];
     alignas(32) uint8_t localHashResults[HASH_BATCH_SIZE][20];
-    alignas(32) int pointIndices[HASH_BATCH_SIZE]; // To map hash result back to point index
+    alignas(32) int pointIndices[HASH_BATCH_SIZE];
 
-    // Precompute target hash for faster comparison using SSE/AVX
-    // Load only the first 16 bytes for the initial check
-    __m128i target16_128 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(TARGET_HASH160_RAW.data()));
-
-    // Precompute generator points [1*G, 2*G, ..., POINTS_BATCH_SIZE*G]
+    // Precompute target hash for comparison
+    __m256i target16 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(TARGET_HASH160_RAW.data()));
+    // Precompute points with AVX2-aligned storage
     alignas(32) Point plusPoints[POINTS_BATCH_SIZE];
     alignas(32) Point minusPoints[POINTS_BATCH_SIZE];
+    // Precompute all points in a more cache-friendly way
     for (int i = 0; i < POINTS_BATCH_SIZE; i++) {
         Int tmp;
-        tmp.SetInt32(i + 1); // Use offset i+1 to generate G, 2G, ...
+        tmp.SetInt32(i);
         plusPoints[i] = secp->ComputePublicKey(&tmp);
         minusPoints[i] = plusPoints[i];
-        minusPoints[i].y.ModNeg(); // Create the negative counterpart -[i+1]*G
+        minusPoints[i].y.ModNeg();
     }
 
-    // Storage for batch modular inverse and point addition
+    // Storage for batch processing
     alignas(32) Int deltaX[POINTS_BATCH_SIZE];
     IntGroup modGroup(POINTS_BATCH_SIZE);
     alignas(32) Int pointBatchX[fullBatchSize];
     alignas(32) Int pointBatchY[fullBatchSize];
 
-    // Initialize combination generator for this thread's range
     CombinationGenerator gen(bit_length, flip_count);
-    if (start_rank >= end_rank) return; // No work to do if range is empty
-    gen.unrank(start_rank.load());
-     // Check if unrank failed (returned empty vector)
-     if (gen.get().empty() && flip_count > 0) { // Don't check if k=0
-         cerr << "\nThread " << threadId << ": Unrank failed for start rank " << to_string_128(start_rank.load()) << ". Stopping thread.\n";
-         return;
-     }
+    gen.unrank(start.load());
 
+    AVXCounter count;
+    count.store(start.load());
+    // Performance tracking
+    uint64_t actual_work_done = 0;
+    auto last_report = chrono::high_resolution_clock::now();
 
-    AVXCounter current_rank = start_rank;
-    uint64_t thread_key_count = 0; // Keys checked by this thread since last global update
-
-    while (!stop_event.load() && current_rank < end_rank) {
+    while (!stop_event.load() && count < end) {
         Int currentKey;
         currentKey.Set(&BASE_KEY);
         const vector<int>& flips = gen.get();
 
-        // If k=0, flips will be empty. Handle this case: only check BASE_KEY + offset*G
-        if (flip_count == 0) {
-             // The logic below implicitly handles k=0 because the BASE_KEY is used
-             // and the loop `for (int pos : flips)` won't execute.
-             // However, the `CombinationGenerator` part might need careful handling for k=0.
-             // Let's assume the loop structure works correctly even for k=0 (generator provides one empty vector).
-        } else if (flips.empty()) {
-             // This might happen if unrank failed or k > n, should have been caught earlier.
-              cerr << "\nThread " << threadId << ": Encountered empty flip vector unexpectedly for rank " << to_string_128(current_rank.load()) << ". Stopping.\n";
-               break; // Stop processing for this thread
-        }
-
-
-        // Apply flips to the base key
+        // Apply flips
         for (int pos : flips) {
-            if (pos >= 0 && pos < bit_length) { // Safety check for bit position
-                Int mask;
-                mask.SetInt32(1);
-                mask.ShiftL(pos);
-                currentKey.Xor(&mask);
-            } else {
-                 cerr << "\nWarning: Invalid flip position " << pos << " encountered.\n";
-                 // Decide how to handle: skip flip, log error, stop?
-            }
+            Int mask;
+            mask.SetInt32(1);
+            mask.ShiftL(pos);
+            currentKey.Xor(&mask);
         }
 
-        // Compute the starting public key P = currentKey * G
-        Point startPoint = secp->ComputePublicKey(&currentKey);
-         if (startPoint.x.IsZero() && startPoint.y.IsZero()) {
-            // If currentKey leads to point at infinity, skip this combination
-            // (though highly unlikely for random-like keys)
-            if (!gen.next()) break; // Advance to next combination or break if done
-            current_rank.increment();
-            continue;
+        // Verify key length
+        string keyStr = currentKey.GetBase16();
+        keyStr = string(64 - keyStr.length(), '0') + keyStr;
+
+        #pragma omp critical
+        {
+            g_threadPrivateKeys[threadId] = keyStr;
         }
-        Int startPointX, startPointY;
+
+        // Compute public key
+        Point startPoint = secp->ComputePublicKey(&currentKey);
+        Int startPointX, startPointY, startPointXNeg;
         startPointX.Set(&startPoint.x);
         startPointY.Set(&startPoint.y);
+        startPointXNeg.Set(&startPointX);
+        startPointXNeg.ModNeg();
 
-        // --- Batch Point Addition: Calculate P +/- [i+1]*G ---
-        // Compute deltaX = plusPoints[i].x - startPoint.x for batch modular inverse
-        for (int i = 0; i < POINTS_BATCH_SIZE; ++i) {
-             deltaX[i].ModSub(&plusPoints[i].x, &startPointX);
+        // Compute deltaX values in batches with manual loop unrolling
+        for (int i = 0; i < POINTS_BATCH_SIZE; i += 4) {
+            deltaX[i].ModSub(&plusPoints[i].x, &startPointX);
+            deltaX[i+1].ModSub(&plusPoints[i+1].x, &startPointX);
+            deltaX[i+2].ModSub(&plusPoints[i+2].x, &startPointX);
+            deltaX[i+3].ModSub(&plusPoints[i+3].x, &startPointX);
         }
-        // Batch modular inverse: deltaX becomes 1/deltaX mod p
         modGroup.Set(deltaX);
         modGroup.ModInv();
 
-        // Compute resulting points using the inverted deltaX values
-         for (int i = 0; i < POINTS_BATCH_SIZE; ++i) {
-             // Check if deltaX was zero (points have same x-coordinate) before inverse
-              // Note: ModInv() might handle this internally, check its implementation.
-              // If ModInv sets result to 0 for zero input, the following calculations might be incorrect.
-              // Assuming ModInv handles it or collision is rare enough to ignore for speed.
+        // Process plus and minus points with manual loop unrolling
+        for (int i = 0; i < POINTS_BATCH_SIZE; i += 4) {
+            // Process 4 plus points
+            for (int j = 0; j < 4; j++) {
+                Int deltaY;
+                deltaY.ModSub(&plusPoints[i+j].y, &startPointY);
+                Int slope; slope.ModMulK1(&deltaY, &deltaX[i+j]);
+                Int slopeSq; slopeSq.ModSquareK1(&slope);
 
-            // Process plus point i: R = P + [i+1]*G
-            Int deltaY_plus; deltaY_plus.ModSub(&plusPoints[i].y, &startPointY);
-            Int slope_plus; slope_plus.ModMulK1(&deltaY_plus, &deltaX[i]); // slope = (y2-y1)/(x2-x1)
-            Int slopeSq_plus; slopeSq_plus.ModSquareK1(&slope_plus);
+                pointBatchX[i+j].Set(&startPointXNeg);
+                pointBatchX[i+j].ModAdd(&slopeSq);
+                pointBatchX[i+j].ModSub(&plusPoints[i+j].x);
 
-            pointBatchX[i].Set(&slopeSq_plus);
-            pointBatchX[i].ModSub(&startPointX);
-            pointBatchX[i].ModSub(&plusPoints[i].x); // Rx = s^2 - x1 - x2
+                Int diffX; diffX.ModSub(&startPointX, &pointBatchX[i+j]);
+                diffX.ModMulK1(&slope);
 
-            Int diffX_plus; diffX_plus.ModSub(&startPointX, &pointBatchX[i]); // x1 - Rx
-            pointBatchY[i].ModMulK1(&slope_plus, &diffX_plus);
-            pointBatchY[i].ModSub(&startPointY); // Ry = s*(x1-Rx) - y1
+                pointBatchY[i+j].Set(&startPointY);
+                pointBatchY[i+j].ModNeg();
+                pointBatchY[i+j].ModAdd(&diffX);
+            }
 
-            // Process minus point i: R = P - [i+1]*G = P + ([i+1]*G).neg()
-            Int deltaY_minus; deltaY_minus.ModSub(&minusPoints[i].y, &startPointY);
-            Int slope_minus; slope_minus.ModMulK1(&deltaY_minus, &deltaX[i]); // slope = (y3-y1)/(x3-x1) where P3 = -P2
-            Int slopeSq_minus; slopeSq_minus.ModSquareK1(&slope_minus);
+            // Process 4 minus points
+            for (int j = 0; j < 4; j++) {
+                Int deltaY;
+                deltaY.ModSub(&minusPoints[i+j].y, &startPointY);
+                Int slope; slope.ModMulK1(&deltaY, &deltaX[i+j]);
+                Int slopeSq; slopeSq.ModSquareK1(&slope);
 
-            pointBatchX[POINTS_BATCH_SIZE + i].Set(&slopeSq_minus);
-            pointBatchX[POINTS_BATCH_SIZE + i].ModSub(&startPointX);
-            pointBatchX[POINTS_BATCH_SIZE + i].ModSub(&minusPoints[i].x); // Rx = s^2 - x1 - x3
+                pointBatchX[POINTS_BATCH_SIZE+i+j].Set(&startPointXNeg);
+                pointBatchX[POINTS_BATCH_SIZE+i+j].ModAdd(&slopeSq);
+                pointBatchX[POINTS_BATCH_SIZE+i+j].ModSub(&minusPoints[i+j].x);
 
-            Int diffX_minus; diffX_minus.ModSub(&startPointX, &pointBatchX[POINTS_BATCH_SIZE + i]); // x1 - Rx
-            pointBatchY[POINTS_BATCH_SIZE + i].ModMulK1(&slope_minus, &diffX_minus);
-            pointBatchY[POINTS_BATCH_SIZE + i].ModSub(&startPointY); // Ry = s*(x1-Rx) - y1
-         }
+                Int diffX; diffX.ModSub(&startPointX, &pointBatchX[POINTS_BATCH_SIZE+i+j]);
+                diffX.ModMulK1(&slope);
 
-        // --- Hash and Check Batch ---
-        int keysInCombination = 0; // Count keys processed for this combination rank
-        for (int batchStart = 0; batchStart < fullBatchSize; batchStart += HASH_BATCH_SIZE) {
-             int currentBatchSize = std::min(HASH_BATCH_SIZE, fullBatchSize - batchStart);
-             int localBatchCount = 0; // Keys ready for hashing in this HASH_BATCH_SIZE batch
+                pointBatchY[POINTS_BATCH_SIZE+i+j].Set(&startPointY);
+                pointBatchY[POINTS_BATCH_SIZE+i+j].ModNeg();
+                pointBatchY[POINTS_BATCH_SIZE+i+j].ModAdd(&diffX);
+            }
+        }
 
-            // Prepare compressed public keys for the current HASH_BATCH_SIZE
-             for (int i = 0; i < currentBatchSize; ++i) {
-                  int pointIndex = batchStart + i; // Index in pointBatchX/Y (0 to fullBatchSize-1)
+        // Process keys in optimized batches
+        int localBatchCount = 0;
+        for (int i = 0; i < fullBatchSize && localBatchCount < HASH_BATCH_SIZE; i++) {
+            Point tempPoint;
+            tempPoint.x.Set(&pointBatchX[i]);
+            tempPoint.y.Set(&pointBatchY[i]);
 
-                  // Check if point is infinity (result of P +/- Q where P = +/- Q)
-                  // This shouldn't happen if base points [i+1]*G are distinct from startPoint P
-                  // and startPoint is not infinity. If it does, skip hashing.
-                   if (pointBatchX[pointIndex].IsZero() && pointBatchY[pointIndex].IsZero()) {
-                        continue; // Skip point at infinity
-                   }
+            // Convert to compressed public key
+            localPubKeys[localBatchCount][0] = tempPoint.y.IsEven() ? 0x02 : 0x03;
+            for (int j = 0; j < 32; j++) {
+                localPubKeys[localBatchCount][1 + j] = pointBatchX[i].GetByte(31 - j);
+            }
+            pointIndices[localBatchCount] = i;
+            localBatchCount++;
 
-                   localPubKeys[localBatchCount][0] = pointBatchY[pointIndex].IsEven() ? 0x02 : 0x03;
-                   for (int j = 0; j < 32; j++) {
-                       localPubKeys[localBatchCount][32 - j] = pointBatchX[pointIndex].GetByte(j); // GetByte expects index 0..31
-                   }
-                   pointIndices[localBatchCount] = pointIndex; // Store original point index
-                   localBatchCount++;
-             }
-
-            if (localBatchCount > 0) {
-                // Compute HASH160 for the prepared keys
+            if (localBatchCount == HASH_BATCH_SIZE) {
                 computeHash160BatchBinSingle(localBatchCount, localPubKeys, localHashResults);
-                thread_key_count += localBatchCount; // Update thread's local key counter
-                keysInCombination += localBatchCount;
+                // Count actual work (HASH_BATCH_SIZE keys checked)
+                actual_work_done += HASH_BATCH_SIZE;
+                localComparedCount += HASH_BATCH_SIZE;
 
-                // Check results against target
-                for (int j = 0; j < localBatchCount; j++) {
-                     // Fast check using SSE/AVX (first 16 bytes)
-                     __m128i cand16_128 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(localHashResults[j]));
-                     __m128i cmp_res = _mm_cmpeq_epi8(cand16_128, target16_128);
-                     unsigned int mask = _mm_movemask_epi8(cmp_res);
+                for (int j = 0; j < HASH_BATCH_SIZE; j++) {
+                    // Load candidate hash
+                    __m256i cand = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(localHashResults[j]));
+                    // Compare first 4 bytes using AVX2
+                    __m256i cmp = _mm256_cmpeq_epi8(cand, target16);
+                    int mask = _mm256_movemask_epi8(cmp);
 
-                     if (mask == 0xFFFF) { // First 16 bytes match
-                         // Full 20-byte comparison
-                         bool fullMatch = true;
-                         for (int k = 16; k < 20; k++) {
-                             if (localHashResults[j][k] != TARGET_HASH160_RAW[k]) {
-                                 fullMatch = false;
-                                 break;
-                             }
-                         }
+                    if ((mask & 0x0F) == 0x0F) {  // First 4 bytes match
+                        // Full comparison
+                        bool fullMatch = true;
+                        for (int k = 0; k < 20; k++) {
+                            if (localHashResults[j][k] != TARGET_HASH160_RAW[k]) {
+                                fullMatch = false;
+                                break;
+                            }
+                        }
 
                         if (fullMatch) {
-                            // --- SOLUTION FOUND ---
-                            stop_event.store(true); // Signal other threads
+                            auto tEndTime = chrono::high_resolution_clock::now();
+                            globalElapsedTime = chrono::duration<double>(tEndTime - tStart).count();
 
-                            // Calculate the final private key: k_final = k_base_flipped +/- offset
+                            // Report actual work done
+                            {
+                                lock_guard<mutex> lock(progress_mutex);
+                                globalComparedCount += actual_work_done;
+                                mkeysPerSec = (double)globalComparedCount / globalElapsedTime / 1e6;
+                            }
+
                             Int foundKey;
-                            foundKey.Set(&currentKey); // Start with the flipped base key
-                            int originalPointIndex = pointIndices[j]; // Index 0 to fullBatchSize-1
-                            int offsetValue = (originalPointIndex % POINTS_BATCH_SIZE) + 1; // Offset is 1 to POINTS_BATCH_SIZE
-
-                            Int offsetInt;
-                            offsetInt.SetInt32(offsetValue);
-
-                            if (originalPointIndex < POINTS_BATCH_SIZE) {
-                                // Case: P + offset*G => k_final = k_current + offset
-                                foundKey.Add(&offsetInt);
+                            foundKey.Set(&currentKey);
+                            int idx = pointIndices[j];
+                            if (idx < POINTS_BATCH_SIZE) {
+                                Int offset;
+                                offset.SetInt32(idx);
+                                foundKey.Add(&offset);
                             } else {
-                                // Case: P - offset*G => k_final = k_current - offset
-                                foundKey.Sub(&offsetInt);
+                                Int offset;
+                                offset.SetInt32(idx - POINTS_BATCH_SIZE);
+                                foundKey.Sub(&offset);
                             }
 
                             string hexKey = foundKey.GetBase16();
-                            hexKey = string(64 - min((int)hexKey.length(), 64), '0') + hexKey.substr(max(0, (int)hexKey.length() - 64)); // Pad to 64 hex chars
+                            hexKey = string(64 - hexKey.length(), '0') + hexKey;
 
-                            // --- Critical section for reporting result ---
                             lock_guard<mutex> lock(result_mutex);
-                            if (results.empty()) { // Ensure only the first found result is stored
-                                results.push(make_tuple(hexKey, current_rank.load(), flip_count));
-                                // Update global count immediately upon finding result
-                                globalComparedCount += thread_key_count;
-                                thread_key_count = 0; // Reset thread count
-                            }
-                            // --- End Critical Section ---
-                            return; // Exit worker function
+                            results.push(make_tuple(hexKey, total_checked_avx.load(), flip_count));
+                            stop_event.store(true);
+                            return;
                         }
-                    } // End if mask == 0xFFFF
-                } // End for loop checking hash results
-            } // End if localBatchCount > 0
+                    }
+                }
 
-            // Check stop event periodically within the inner loop
-            if (stop_event.load()) {
-                 globalComparedCount += thread_key_count; // Update count before exiting
-                 return;
+                total_checked_avx.increment();
+                localBatchCount = 0;
+
+                // Progress reporting
+                __uint128_t current_total = total_checked_avx.load();
+                if (current_total % REPORT_INTERVAL == 0 || count.load() == end.load() - 1) {
+                    auto now = chrono::high_resolution_clock::now();
+                    globalElapsedTime = chrono::duration<double>(now - tStart).count();
+
+                    globalComparedCount += localComparedCount;
+                    localComparedCount = 0;
+                    mkeysPerSec = (double)globalComparedCount / globalElapsedTime / 1e6;
+                    double progress = min(100.0, (double)current_total / total_combinations * 100.0);
+
+                    lock_guard<mutex> lock(progress_mutex);
+                    moveCursorTo(0, 10);
+                    cout << "Progress: " << fixed << setprecision(6) << progress << "%\n";
+                    cout << "Processed: " << to_string_128(current_total) << "\n";
+                    cout << "Speed: " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";
+                    cout << "Elapsed Time: " << formatElapsedTime(globalElapsedTime) << "\n";
+                    cout.flush();
+
+                    if (current_total >= total_combinations) {
+                        stop_event.store(true);
+                        break;
+                    }
+                }
             }
-        } // End loop over HASH_BATCH_SIZE chunks
-
-        // Update global count and report progress periodically
-        // Calculate combinations checked by this thread
-         __uint128_t combinations_done_thread = current_rank.load() - start_rank.load() + 1;
-
-        if ((combinations_done_thread % (REPORT_INTERVAL / fullBatchSize + 1) == 0) || stop_event.load() || current_rank.load() == end_rank.load() - 1)
-        {
-             globalComparedCount += thread_key_count; // Add keys checked since last update
-             thread_key_count = 0; // Reset counter
-
-             if(threadId == 0 && !stop_event.load()) { // Let thread 0 update the display if not stopping
-                 lock_guard<mutex> lock(progress_mutex);
-                 auto now = chrono::high_resolution_clock::now();
-                 globalElapsedTime = chrono::duration<double>(now - tStart).count();
-                 uint64_t currentGlobalKeyCount = globalComparedCount.load(); // Read atomic counter
-
-                 // Calculate overall progress based on estimated total keys or combinations
-                 // Using combinations is more deterministic if total_combinations is accurate
-                 double progressPercent = 0.0;
-                 if (total_combinations > 0 && total_combinations != static_cast<__uint128_t>(-1)) {
-                     // Estimate total checked combinations across all threads (approximate)
-                      __uint128_t estimated_total_checked_comb = current_rank.load(); // Use rank of thread 0 as proxy
-                      progressPercent = min(100.0, (double)estimated_total_checked_comb / total_combinations * 100.0);
-
-                      // Better estimate? Sum progress of all threads? Maybe too complex.
-                 }
-
-                 if (globalElapsedTime > 0.1) {
-                     mkeysPerSec = (double)currentGlobalKeyCount / globalElapsedTime / 1e6;
-                 } else {
-                     mkeysPerSec = 0.0;
-                 }
-
-                 moveCursorTo(0, 10); // Position cursor below header
-                 cout << "Progress (Combinations): " << fixed << setprecision(6) << progressPercent << "%  \n";
-                 cout << "Checked Keys (Total):    " << currentGlobalKeyCount << "         \n";
-                 cout << "Speed (approx):          " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s   \n";
-                 cout << "Elapsed Time:            " << formatElapsedTime(globalElapsedTime) << "       \n";
-                 // Maybe add current rank being checked by thread 0?
-                 // cout << "Thread 0 Rank:           " << to_string_128(current_rank.load()) << "        \n";
-                 cout.flush();
-             }
         }
 
-        // Move to the next combination
         if (!gen.next()) {
-            break; // No more combinations in the range assigned to this thread
+            break;
         }
-        current_rank.increment();
+        count.increment();
 
-    } // End while loop (!stop_event && current_rank < end_rank)
+        if (count >= end) {
+            break;
+        }
+    }
 
-    // Final update of global count from this thread
-    globalComparedCount += thread_key_count;
+    // Final check when thread completes its range
+    if (!stop_event.load() && total_checked_avx.load() >= total_combinations) {
+        stop_event.store(true);
+    }
 }
 
-// Print command-line usage instructions
 void printUsage(const char* programName) {
-    cout << "Usage: " << programName << " -p <puzzle_num> [options]\n";
+    cout << "Usage: " << programName << " [options]\n";
     cout << "Options:\n";
-    cout << "  -p, --puzzle NUM    Puzzle number to solve (required, e.g., 20, 68)\n";
-    cout << "  -t, --threads NUM   Number of CPU cores to use (default: all available)\n";
-    cout << "  -f, --flips NUM     Override default flip count for the puzzle\n";
-    cout << "  -k, --key KEY       Specify the base private key manually (decimal string)\n";
-    cout << "                      (Overrides the key associated with puzzle -p)\n";
+    cout << "  -p, --puzzle NUM    Puzzle number to solve (default: 69)\n"; // *** DEĞİŞTİRİLDİ: Varsayılan puzzle numarası güncellendi ***
+    cout << "  -t, --threads NUM   Number of CPU cores to use (default: all)\n";
+    cout << "  -f, --flips NUM     Override default flip count for puzzle\n";
     cout << "  -h, --help          Show this help message\n";
-    cout << "\nExample (using puzzle defaults):\n";
-    cout << "  " << programName << " -p 68 -t 8\n";
-    cout << "\nExample (overriding flips):\n";
-    cout << "  " << programName << " -p 68 -t 8 -f 30\n";
-    cout << "\nExample (manual base key):\n";
-    cout << "  " << programName << " -p 68 -f 34 -k 132656943602386256302\n";
-    cout << "\nSupported Puzzle Numbers in PUZZLE_DATA: ";
-    bool first = true;
-    for(const auto& pair : PUZZLE_DATA) {
-        if (!first) cout << ", ";
-        cout << pair.first;
-        first = false;
-    }
-    cout << endl;
+    cout << "\nExample:\n";
+    cout << "  " << programName << " -p 69 -t 8\n"; // *** DEĞİŞTİRİLDİ: Örnek güncellendi ***
 }
 
 int main(int argc, char* argv[]) {
-    // Setup signal handler for Ctrl+C
     signal(SIGINT, signalHandler);
-    signal(SIGTERM, signalHandler); // Handle termination signal too
-
-    initConsole(); // Prepare console for special output formatting
-
-    string manual_base_key_input = ""; // Store manually provided key
-
-    // --- Argument Parsing ---
+    // Parse command line arguments
     int opt;
     int option_index = 0;
     static struct option long_options[] = {
         {"puzzle", required_argument, 0, 'p'},
         {"threads", required_argument, 0, 't'},
         {"flips", required_argument, 0, 'f'},
-        {"key", required_argument, 0, 'k'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
 
-    // Optstring includes p: (required), t:, f:, k:, h (no arg)
-    while ((opt = getopt_long(argc, argv, "p:t:f:k:h", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:t:f:h", long_options, &option_index)) != -1) {
+        if (opt == -1) break;
         switch (opt) {
             case 'p':
-                try {
-                    PUZZLE_NUM = std::stoi(optarg);
-                } catch (const std::exception& e) {
-                    cerr << "Error: Invalid puzzle number format: " << optarg << endl;
-                    printUsage(argv[0]);
+                PUZZLE_NUM = atoi(optarg);
+                // *** DEĞİŞTİRİLDİ: Puzzle numarası aralığı 69'u içerecek şekilde güncellendi ***
+                if (PUZZLE_NUM < 20 || PUZZLE_NUM > 69) {
+                    cerr << "Error: Puzzle number must be between 20 and 69\n"; // *** DEĞİŞTİRİLDİ: Hata mesajı güncellendi ***
                     return 1;
                 }
-                // Validate puzzle number exists in our data map later
                 break;
             case 't':
-                 try {
-                    WORKERS = std::stoi(optarg);
-                } catch (const std::exception& e) {
-                    cerr << "Error: Invalid thread number format: " << optarg << endl;
-                    return 1;
-                }
+                WORKERS = atoi(optarg);
                 if (WORKERS < 1) {
                     cerr << "Error: Thread count must be at least 1\n";
                     return 1;
                 }
-                // Cap threads to hardware concurrency if desired, or let user specify more
-                // WORKERS = std::min(WORKERS, (int)std::thread::hardware_concurrency());
-                // if (WORKERS == 0) WORKERS = 1; // Ensure at least one if detection fails
                 break;
             case 'f':
-                 try {
-                    FLIP_COUNT = std::stoi(optarg);
-                } catch (const std::exception& e) {
-                    cerr << "Error: Invalid flip count format: " << optarg << endl;
+                FLIP_COUNT = atoi(optarg);
+                if (FLIP_COUNT < 1) {
+                    cerr << "Error: Flip count must be at least 1\n";
                     return 1;
                 }
-                if (FLIP_COUNT < 0) {
-                    cerr << "Error: Flip count must be non-negative\n";
-                    return 1;
-                }
-                break;
-            case 'k':
-                manual_base_key_input = optarg;
-                 // Basic validation: check if it contains non-digit characters
-                 if (manual_base_key_input.find_first_not_of("0123456789") != std::string::npos) {
-                     cerr << "Error: Manual key must be a decimal string (only digits 0-9 allowed).\n";
-                     return 1;
-                 }
                 break;
             case 'h':
                 printUsage(argv[0]);
                 return 0;
-            case '?': // Handle unknown options or missing arguments by getopt
-                 // getopt_long usually prints its own error message
-                 printUsage(argv[0]);
-                 return 1;
-            default: // Should not happen
-                abort();
+            default:
+                printUsage(argv[0]);
+                return 1;
         }
     }
 
-     // Check if required puzzle number was provided
-     if (PUZZLE_NUM == -1) {
-         cerr << "Error: Puzzle number (-p) is required.\n";
-         printUsage(argv[0]);
-         return 1;
-     }
-
-     // Check if the provided puzzle number is in our known data
-     auto puzzle_it = PUZZLE_DATA.find(PUZZLE_NUM);
-     if (puzzle_it == PUZZLE_DATA.end()) {
-         cerr << "Error: Puzzle number " << PUZZLE_NUM << " is not defined in the internal PUZZLE_DATA map.\n";
-         printUsage(argv[0]);
-         return 1;
-     }
-
-    // --- Initialization ---
     tStart = chrono::high_resolution_clock::now();
+
     Secp256K1 secp;
     secp.Init();
 
-    // Retrieve puzzle data
-    auto [DEFAULT_FLIP_COUNT, TARGET_HASH160_HEX, PRIVATE_KEY_DECIMAL_FROM_MAP] = puzzle_it->second;
+    auto puzzle_it = PUZZLE_DATA.find(PUZZLE_NUM);
+    if (puzzle_it == PUZZLE_DATA.end()) {
+        cerr << "Error: Invalid puzzle number\n";
+        return 1;
+    }
 
-    // Determine final flip count (use override if provided)
+    auto [DEFAULT_FLIP_COUNT, TARGET_HASH160_HEX, PRIVATE_KEY_DECIMAL] = puzzle_it->second;
+    // Use override flip count if provided, otherwise use puzzle default
     if (FLIP_COUNT == -1) {
         FLIP_COUNT = DEFAULT_FLIP_COUNT;
     }
-    // Validate flip count against puzzle bit length
-    if (FLIP_COUNT > PUZZLE_NUM) {
-        cerr << "Warning: Flip count (" << FLIP_COUNT
-             << ") is greater than puzzle bit length (" << PUZZLE_NUM
-             << "). Calculations might be excessive or incorrect.\n";
-        // Optionally, cap it:
-        // cerr << "Setting flip count to " << PUZZLE_NUM << ".\n";
-        // FLIP_COUNT = PUZZLE_NUM;
-    }
-     if (FLIP_COUNT < 0) {
-          cerr << "Internal Error: Flip count became negative after processing defaults/overrides." << endl;
-          return 1; // Should have been caught earlier
-     }
 
-    // Set and convert target hash
     TARGET_HASH160 = TARGET_HASH160_HEX;
-    if (TARGET_HASH160.length() != 40) {
-        cerr << "Error: Invalid target HASH160 format in PUZZLE_DATA for puzzle " << PUZZLE_NUM << endl;
+    // Convert target hash to bytes
+    for (__uint128_t i = 0; i < 20; i++) {
+        TARGET_HASH160_RAW[i] = stoul(TARGET_HASH160.substr(i * 2, 2), nullptr, 16);
+    }
+
+    // Set base key from decimal string
+    BASE_KEY.SetBase10(const_cast<char*>(PRIVATE_KEY_DECIMAL.c_str()));
+    // Verify base key
+    Int testKey;
+    testKey.SetBase10(const_cast<char*>(PRIVATE_KEY_DECIMAL.c_str()));
+    if (!testKey.IsEqual(&BASE_KEY)) {
+        cerr << "Base key initialization failed!\n";
         return 1;
     }
-    for (size_t i = 0; i < 20; i++) {
-        try {
-           TARGET_HASH160_RAW[i] = stoul(TARGET_HASH160.substr(i * 2, 2), nullptr, 16);
-        } catch (const std::exception& e) {
-             cerr << "Error converting target HASH160 hex '" << TARGET_HASH160.substr(i * 2, 2)
-                  << "' to byte: " << e.what() << endl;
-             return 1;
-        }
-    }
 
-    // --- Set Base Key (Manual or Default) ---
-    string used_base_key_decimal; // Store the key actually used for printing/logging
-    if (!manual_base_key_input.empty()) {
-        // Use manually provided key
-        std::vector<char> manual_key_cstr(manual_base_key_input.c_str(), manual_base_key_input.c_str() + manual_base_key_input.size() + 1); // +1 for null terminator
-        BASE_KEY.SetBase10(manual_key_cstr.data()); // Pass mutable buffer
-        // Assuming SetBase10 doesn't return status and handles errors internally or crashes
-        used_base_key_decimal = manual_base_key_input;
-        cout << "Using manual Base Key (Decimal): " << used_base_key_decimal << "\n";
-    } else {
-        // Use key from puzzle data
-        std::vector<char> map_key_cstr(PRIVATE_KEY_DECIMAL_FROM_MAP.c_str(), PRIVATE_KEY_DECIMAL_FROM_MAP.c_str() + PRIVATE_KEY_DECIMAL_FROM_MAP.size() + 1);
-        BASE_KEY.SetBase10(map_key_cstr.data()); // Pass mutable buffer
-        // Assuming SetBase10 is successful for map data
-        used_base_key_decimal = PRIVATE_KEY_DECIMAL_FROM_MAP;
-        // Optional feedback: cout << "Using Base Key from Puzzle Data (Decimal): " << used_base_key_decimal << "\n";
-    }
-
-    // Optional: Check if base key seems too large for the puzzle context (informational)
     if (BASE_KEY.GetBitLength() > PUZZLE_NUM) {
-        cerr << "Warning: Effective Base Key (" << BASE_KEY.GetBitLength()
-             << " bits) exceeds puzzle bit length (" << PUZZLE_NUM << " bits).\n";
+        cerr << "Base key exceeds puzzle bit length!\n";
+        return 1;
     }
 
     // Calculate total combinations
     total_combinations = CombinationGenerator::combinations_count(PUZZLE_NUM, FLIP_COUNT);
-    if (total_combinations == static_cast<__uint128_t>(-1)) { // Check for overflow indicator
-        cerr << "Error: Calculation of total combinations resulted in overflow. Cannot proceed.\n";
-        return 1;
+    // Format base key for display
+    string paddedKey = BASE_KEY.GetBase16();
+    size_t firstNonZero = paddedKey.find_first_not_of('0');
+    // Handle case where key is 0
+    if (string::npos == firstNonZero) {
+         paddedKey = "0";
+    } else {
+        paddedKey = paddedKey.substr(firstNonZero);
     }
-     if (total_combinations == 0 && FLIP_COUNT > 0) {
-          cerr << "Warning: Calculated 0 combinations for n=" << PUZZLE_NUM << ", k=" << FLIP_COUNT << ". Check parameters.\n";
-          // Allow proceeding if k=0, otherwise it might be an error state.
-          if (FLIP_COUNT > 0) return 1;
-     }
+    // Add 0x prefix
+    paddedKey = "0x" + paddedKey;
 
-    // Format base key (hex) for display (pad to puzzle bit length)
-    string baseKeyHex = BASE_KEY.GetBase16();
-    int requiredHexChars = (PUZZLE_NUM + 3) / 4; // Calculate needed hex chars, round up
-    baseKeyHex = string(max(0, requiredHexChars - (int)baseKeyHex.length()), '0') + baseKeyHex.substr(max(0, (int)baseKeyHex.length() - requiredHexChars));
-
-
-    // --- Print Header ---
+    // Print initial header
     clearTerminal();
     cout << "=======================================\n";
-    cout << "== Mutagen Puzzle Solver             ==\n";
+    cout << "== Mutagen Puzzle Solver by Denevron ==\n";
     cout << "=======================================\n";
-    cout << "Puzzle Number:    " << PUZZLE_NUM << " (" << PUZZLE_NUM << "-bit)\n";
-    cout << "Target HASH160:   " << TARGET_HASH160 << "\n";
-    cout << "Base Key (Hex):   0x" << baseKeyHex << "\n";
-    if (!manual_base_key_input.empty()){
-         cout << "Base Key (Dec):   " << used_base_key_decimal << " (Manual Input)\n";
-    } else {
-         cout << "Base Key (Dec):   " << used_base_key_decimal << " (From Puzzle Data)\n";
-    }
-    cout << "Flip Count:       " << FLIP_COUNT;
-    if (FLIP_COUNT != DEFAULT_FLIP_COUNT && manual_base_key_input.empty()) {
-        cout << " (Override, default was " << DEFAULT_FLIP_COUNT << ")";
-    } else if (FLIP_COUNT != DEFAULT_FLIP_COUNT && !manual_base_key_input.empty()) {
-        cout << " (Override)"; // Indicate override even with manual key if different from default
+    cout << "Starting puzzle: " << PUZZLE_NUM << " (" << PUZZLE_NUM << "-bit)\n";
+    cout << "Target HASH160: " << TARGET_HASH160.substr(0, 10) << "..." << TARGET_HASH160.substr(TARGET_HASH160.length()-10) << "\n";
+    cout << "Base Key: " << paddedKey << "\n";
+    cout << "Flip count: " << FLIP_COUNT << " ";
+    if (FLIP_COUNT != DEFAULT_FLIP_COUNT) {
+        cout << "(override, default was " << DEFAULT_FLIP_COUNT << ")";
     }
     cout << "\n";
-    cout << "Total Combinations:" << (total_combinations == static_cast<__uint128_t>(-1) ? "OVERFLOW" : to_string_128(total_combinations)) << "\n";
-    cout << "Using Threads:    " << WORKERS << "\n";
-    cout << "---------------------------------------\n"; // Separator before progress
+    // *** DEĞİŞTİRİLDİ: Flip sayısı tahmini ise uyarı ekle ***
+    if (PUZZLE_NUM == 69 && FLIP_COUNT == 35) { // Eğer puzzle 69 ve flip sayısı tahmini olan 35 ise
+        cout << "*** WARNING: Flip count 35 is an ESTIMATE for Puzzle 69 and might be incorrect! ***\n";
+    }
+    cout << "Total Flips: " << to_string_128(total_combinations) << "\n";
+    cout << "Using: " << WORKERS << " threads\n";
+    cout << "\n";
 
-    // --- Thread Creation and Work Distribution ---
+    g_threadPrivateKeys.resize(WORKERS, "0");
     vector<thread> threads;
+    // Distribute work evenly across threads using AVXCounter
     AVXCounter total_combinations_avx;
     total_combinations_avx.store(total_combinations);
 
-    if (total_combinations == 0) {
-        // Handle k=0 case: Only need to check offsets from the base key
-        // The current worker loop structure handles this implicitly,
-        // as CombinationGenerator(n, 0) should yield one empty flip vector.
-        // We still need to distribute the "single combination check" across threads,
-        // though it's less efficient. For simplicity, run it on one thread or adapt worker.
-        cout << "\nFlip count is 0. Checking offsets from the base key...\n";
-        // For now, let the standard distribution handle this (it will run one 'combination').
-        // A dedicated k=0 path might be slightly faster but adds complexity.
-        // WORKERS = 1; // Option: Force single thread for k=0?
-        if (WORKERS > 1) {
-             cout << "Warning: Using multiple threads for k=0 might be inefficient.\n";
-        }
-         // The existing distribution logic should work, assigning rank 0 to thread 0.
-         total_combinations = 1; // Treat k=0 as 1 combination for distribution
-         total_combinations_avx.store(1);
+    AVXCounter comb_per_thread = AVXCounter::div(total_combinations_avx, WORKERS);
+    uint64_t remainder = AVXCounter::mod(total_combinations_avx, WORKERS);
+
+    for (int i = 0; i < WORKERS; i++) {
+        AVXCounter start, end;
+        // Calculate start: (i * comb_per_thread) + min(i, remainder)
+        AVXCounter base = AVXCounter::mul(i, comb_per_thread.load());
+        uint64_t extra = min(static_cast<uint64_t>(i), remainder);
+        start.store(base.load() + extra);
+
+        // Calculate end: start + comb_per_thread + (i < remainder ? 1 : 0)
+        end.store(start.load() + comb_per_thread.load() + (i < remainder ? 1 : 0));
+        threads.emplace_back(worker, &secp, PUZZLE_NUM, FLIP_COUNT, i, start, end);
     }
 
-
-    if (total_combinations > 0 && total_combinations != static_cast<__uint128_t>(-1))
-    {
-        AVXCounter comb_per_thread = AVXCounter::div(total_combinations_avx, WORKERS);
-        uint64_t remainder = AVXCounter::mod(total_combinations_avx, WORKERS);
-        AVXCounter current_start_rank; // Starts at 0
-
-        for (int i = 0; i < WORKERS; i++) {
-            AVXCounter assigned_count = comb_per_thread;
-            if (i < remainder) {
-                assigned_count.increment(); // Add one from the remainder
-            }
-
-            AVXCounter start_rank = current_start_rank;
-            AVXCounter end_rank = start_rank;
-            end_rank.add(assigned_count.load());
-
-            // Ensure end_rank doesn't exceed total combinations if count is > 0
-             if (assigned_count.load() > 0 && end_rank.load() > total_combinations) {
-                 end_rank.store(total_combinations);
-             }
-
-            // Launch thread only if there's work in the range [start_rank, end_rank)
-             if (start_rank < end_rank) {
-                 threads.emplace_back(worker, &secp, PUZZLE_NUM, FLIP_COUNT, i, start_rank, end_rank);
-             }
-
-            current_start_rank = end_rank; // Set start for the next thread
-        }
-    } else if (total_combinations != static_cast<__uint128_t>(-1)) { // Only print if not overflow
-         cout << "\nNo combinations to check (total_combinations is 0 and flip_count > 0?).\n";
-         return 0; // Exit cleanly
-    }
-
-
-    // --- Wait for Threads and Report Result ---
     for (auto& t : threads) {
         if (t.joinable()) {
             t.join();
         }
     }
 
-    auto tEnd = chrono::high_resolution_clock::now();
-    globalElapsedTime = chrono::duration<double>(tEnd - tStart).count();
-    uint64_t finalKeyCount = globalComparedCount.load();
-    if (globalElapsedTime > 0.01) {
-       mkeysPerSec = (double)finalKeyCount / globalElapsedTime / 1e6;
-    } else {
-        mkeysPerSec = 0.0; // Avoid division by zero or inf values
-    }
-
-    // Final progress update to show 100% if completed without finding
-    // Ensure cursor is below the potentially multi-line progress area
-    moveCursorTo(0, 15); // Move below the progress lines
-
     if (!results.empty()) {
-        // --- Solution Found ---
-        auto [hex_key, comb_index, flips] = results.front();
+        auto [hex_key, checked, flips] = results.front();
+        globalElapsedTime = chrono::duration<double>(chrono::high_resolution_clock::now() - tStart).count();
+        mkeysPerSec = (double)globalComparedCount / globalElapsedTime / 1e6;
 
-        // Format result key for display (compact hex)
         string compactHex = hex_key;
-        size_t firstNonZero = compactHex.find_first_not_of('0');
-        if (string::npos != firstNonZero) {
-             compactHex = compactHex.substr(firstNonZero);
+        size_t firstNonZeroCompact = compactHex.find_first_not_of('0');
+        // Handle case where key is 0
+        if (string::npos == firstNonZeroCompact) {
+             compactHex = "0";
         } else {
-             compactHex = "0"; // Handle case where key is literally 0
+            compactHex = compactHex.substr(firstNonZeroCompact);
         }
-         compactHex = "0x" + compactHex;
+        compactHex = "0x" + compactHex;
 
 
-        cout << "\n=======================================\n";
+        cout << "=======================================\n";
         cout << "=========== SOLUTION FOUND ============\n";
         cout << "=======================================\n";
-        cout << "Private key (Hex): " << compactHex << "\n"; // Compact hex
-        cout << "Private key (Dec): ";
-        // --- FIX: Convert hex_key string to Int using mutable copy ---
-        Int resultKey;
-        std::vector<char> hex_key_cstr(hex_key.c_str(), hex_key.c_str() + hex_key.size() + 1);
-        resultKey.SetBase16(hex_key_cstr.data()); // Pass mutable buffer
-        cout << resultKey.GetBase10() << "\n";
-        // --- End Fix ---
-        cout << "Found at comb idx: " << to_string_128(comb_index) << " (approx)\n"; // Rank where solution was found
-        cout << "Bit flips used:    " << flips << "\n";
-        cout << "Total Keys Checked:" << finalKeyCount << "\n";
-        cout << "Time:              " << fixed << setprecision(2) << globalElapsedTime << " seconds ("
+        cout << "Private key: " << compactHex << "\n";
+        cout << "Checked " << to_string_128(checked) << " combinations\n";
+        cout << "Bit flips: " << flips << endl;
+        cout << "Time: " << fixed << setprecision(2) << globalElapsedTime << " seconds ("
              << formatElapsedTime(globalElapsedTime) << ")\n";
-        cout << "Average Speed:     " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";
+        cout << "Speed: " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";
 
-        // Save solution (full, padded hex key)
+        // Save solution
         ofstream out("puzzle_" + to_string(PUZZLE_NUM) + "_solution.txt");
         if (out) {
-            out << hex_key; // Save the full 64-char hex key
+            out << hex_key; // Save the full hex key
             out.close();
             cout << "Solution saved to puzzle_" << PUZZLE_NUM << "_solution.txt\n";
         } else {
             cerr << "Failed to save solution to file!\n";
         }
-    } else if (stop_event.load()) {
-        // --- Search Interrupted ---
-         cout << "\n\nSearch stopped prematurely (Ctrl+C or error).\n";
-         cout << "Checked " << finalKeyCount << " keys in " << fixed << setprecision(2) << globalElapsedTime << " seconds.\n";
-         cout << "Average Speed: " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";
-    }
-     else {
-        // --- No Solution Found ---
-        cout << "\n\nNo solution found after checking all combinations.\n";
-         if (total_combinations != static_cast<__uint128_t>(-1)) {
-             cout << "Checked " << to_string_128(total_combinations) << " combinations (" << finalKeyCount << " keys).\n";
-         } else {
-              cout << "Checked " << finalKeyCount << " keys (combination count overflowed).\n";
-         }
+    } else {
+        __uint128_t final_count = total_checked_avx.load();
+        globalElapsedTime = chrono::duration<double>(chrono::high_resolution_clock::now() - tStart).count();
+        // Avoid division by zero if elapsed time is very small or zero
+        if (globalElapsedTime > 1e-9) {
+             mkeysPerSec = (double)globalComparedCount / globalElapsedTime / 1e6;
+        } else {
+             mkeysPerSec = 0.0;
+        }
+        cout << "\n\nNo solution found. Checked " << to_string_128(final_count) << " combinations\n";
         cout << "Time: " << fixed << setprecision(2) << globalElapsedTime << " seconds ("
              << formatElapsedTime(globalElapsedTime) << ")\n";
-        cout << "Average Speed: " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";
+        cout << "Speed: " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";
     }
 
-    return results.empty() ? 1 : 0; // Return 0 if found, 1 if not found or interrupted
+    return 0;
 }
